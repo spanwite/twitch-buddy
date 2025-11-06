@@ -1,0 +1,19 @@
+{
+	"name": "twitch-buddy",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"start": "bun run index.ts"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.1.2",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"winston": "^3.17.0",
+		"zod": "^4.1.12"
+	}
+}
