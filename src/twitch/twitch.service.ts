@@ -1,5 +1,5 @@
 import type { Logger } from '../logger/logger.interface.ts';
-import { chunk } from '../utils/array.ts';
+import { chunk, list } from '../utils/array.ts';
 import { HttpRequestError } from '../utils/error.ts';
 import {
 	type TwitchStreamSchema,
@@ -22,77 +22,64 @@ export class TwitchService {
 		this.logger = deps.logger;
 	}
 
-	async fetchUsersByLogins(logins: string[]): Promise<TwitchUserSchema[]>;
-	async fetchUsersByLogins(login: string): Promise<TwitchUserSchema | null>;
-	async fetchUsersByLogins(
-		loginsOrLogin: string[] | string,
-	): Promise<TwitchUserSchema[] | TwitchUserSchema | null> {
+	async fetchUsers(query?: {
+		ids?: string[] | string;
+		logins?: string[] | string;
+	}): Promise<TwitchUserSchema[]> {
 		await this.updateAppAccessTokenIfExpired();
 
-		const isLoginsArray = Array.isArray(loginsOrLogin);
-		const logins = isLoginsArray ? loginsOrLogin : [loginsOrLogin];
-		const chunks = chunk(logins, 100);
+		const idItems = list(query?.ids ?? []).map((id) => `id=${id}`);
+		const loginItems = list(query?.logins ?? []).map((login) => `login=${login}`);
+		const queryItems = ([] as Array<string>).concat(idItems, loginItems);
+		const chunks = chunk(queryItems, 100);
 		const results: TwitchUserSchema[] = [];
 
 		for (const chunk of chunks) {
-			const query = chunk.map((login) => `login=${login}`).join('&');
+			const query = chunk.join('&');
 			const response = await fetch(`${this.baseUrl}/users?${query}`, {
 				method: 'GET',
 				headers: this.headers,
 			});
+			const responseBody = await response.json();
 			if (!response.ok) {
-				const responseBody = await response.json();
 				throw new HttpRequestError(response.status, responseBody);
 			}
-			const data = await response.json();
-			const users = TwitchUsersResponseSchema.parse(data).data;
+			const users = TwitchUsersResponseSchema.parse(responseBody).data;
 
 			results.push(...users);
 		}
 
-		if (isLoginsArray) {
-			return results;
-		} else {
-			return results[0] ?? null;
-		}
+		return results;
 	}
 
-	async fetchStreamsByUserIds(userIds: string[]): Promise<TwitchStreamSchema[]>;
-	async fetchStreamsByUserIds(userId: string): Promise<TwitchStreamSchema | null>;
-	async fetchStreamsByUserIds(
-		idsOrId: string[] | string,
-	): Promise<TwitchStreamSchema[] | TwitchStreamSchema | null> {
+	async fetchStreams(query?: {
+		userIds?: string[] | string;
+		userLogins?: string[] | string;
+	}): Promise<TwitchStreamSchema[]> {
 		await this.updateAppAccessTokenIfExpired();
 
-		const isUserIdsArray = Array.isArray(idsOrId);
-		const userIds = isUserIdsArray ? idsOrId : [idsOrId];
-		const chunks = chunk(userIds, 100);
+		const userIdItems = list(query?.userIds ?? []).map((id) => `user_id=${id}`);
+		const userLoginItems = list(query?.userLogins ?? []).map((login) => `user_login=${login}`);
+		const queryItems = ([] as Array<string>).concat(userIdItems, userLoginItems);
+		const chunks = chunk(queryItems, 100);
 		const results: TwitchStreamSchema[] = [];
 
 		for (const chunk of chunks) {
-			const query = chunk.map((userId) => `user_id=${userId}`).join('&');
+			const query = chunk.join('&');
 			const response = await fetch(`${this.baseUrl}/streams?${query}`, {
 				method: 'GET',
 				headers: this.headers,
 			});
+			const responseBody = await response.json();
 			if (!response.ok) {
-				const responseBody = await response.json();
 				throw new HttpRequestError(response.status, responseBody);
 			}
-			const data = await response.json();
-			if (!data) {
-				throw new Error('empty response from server');
-			}
-			const streams = TwitchStreamsResponseSchema.parse(data).data;
+			const streams = TwitchStreamsResponseSchema.parse(responseBody).data;
 
 			results.push(...streams);
 		}
 
-		if (isUserIdsArray) {
-			return results;
-		} else {
-			return results[0] ?? null;
-		}
+		return results;
 	}
 
 	protected async updateAppAccessTokenIfExpired() {
@@ -123,15 +110,11 @@ export class TwitchService {
 				grant_type: 'client_credentials',
 			}),
 		});
+		const responseBody = await response.json();
 		if (!response.ok) {
-			const responseBody = await response.json();
 			throw new HttpRequestError(response.status, responseBody);
 		}
-		const data = await response.json();
-		if (!data) {
-			throw new Error('empty response from server');
-		}
-		return TwitchTokenResponseSchema.parse(data);
+		return TwitchTokenResponseSchema.parse(responseBody);
 	}
 
 	protected get headers() {

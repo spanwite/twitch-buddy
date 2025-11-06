@@ -5,3 +5,10 @@ export function chunk<T>(array: T[], chunkSize: number): T[][] {
 	}
 	return chunks;
 }
+
+export function list<T>(value: T | T[]): T[] {
+	if (Array.isArray(value)) {
+		return value;
+	}
+	return [value];
+}
