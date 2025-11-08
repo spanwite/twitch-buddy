@@ -8,4 +8,7 @@ export const ConfigSchema = z.object({
 	database: z.object({
 		url: z.string(),
 	}),
+	telegram: z.object({
+		botToken: z.string(),
+	}),
 });

@@ -7,12 +7,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.1.2",
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"@types/node-telegram-bot-api": "^0.64.12"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"node-telegram-bot-api": "^0.66.0",
 		"winston": "^3.17.0",
 		"zod": "^4.1.12"
 	}

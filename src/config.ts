@@ -9,7 +9,7 @@ export const config = ConfigSchema.parse({
 	database: {
 		url: Bun.env.DATABASE_URL,
 	},
-	// telegram: {
-	// 	botToken: Bun.env.TELEGRAM_BOT_TOKEN,
-	// },
+	telegram: {
+		botToken: Bun.env.TELEGRAM_BOT_TOKEN,
+	},
 });
