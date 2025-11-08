@@ -31,7 +31,13 @@ export class SubscriptionRepository {
 
 	protected createTable() {
 		this.database.run(
-			`CREATE TABLE IF NOT EXISTS ${this.tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, userId TEXT NOT NULL, streamerId TEXT NOT NULL, lastNotifiedStreamId TEXT DEFAULT '', lastNotifiedStreamStatus TEXT DEFAULT '');`,
+			`CREATE TABLE IF NOT EXISTS ${this.tableName} (
+				userId TEXT NOT NULL,
+				streamerId TEXT NOT NULL,
+				lastNotifiedStreamId TEXT DEFAULT '',
+				lastNotifiedStreamStatus TEXT DEFAULT '',
+				PRIMARY KEY(userId, streamerId)
+			);`,
 		);
 	}
 
@@ -48,6 +54,12 @@ export class SubscriptionRepository {
 			.run(userId, streamerId, lastNotifiedStreamId ?? '', lastNotifiedStreamStatus ?? '');
 	}
 
+	delete(args?: SubscriptionQuery) {
+		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
+		return this.database
+			.prepare(`DELETE FROM ${this.tableName} ${whereQuery}`)
+			.run(...whereParams);
+	}
 	findFirst(args?: SubscriptionQuery): SubscriptionSchema | null {
 		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
 		const query = `SELECT * FROM ${this.tableName}${whereQuery}`;
