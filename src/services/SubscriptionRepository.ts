@@ -9,7 +9,7 @@ export interface SubscriptionSchema {
 	lastNotifiedStreamStatus: string;
 }
 
-export interface SubscriptionDto {
+export interface SubscriptionCreate {
 	userId: string;
 	streamerId: string;
 	lastNotifiedStreamId?: string;
@@ -30,6 +30,7 @@ export class SubscriptionRepository {
 	}
 
 	protected createTable() {
+		// this.database.run(`DROP TABLE ${this.tableName}`);
 		this.database.run(
 			`CREATE TABLE IF NOT EXISTS ${this.tableName} (
 				userId TEXT NOT NULL,
@@ -46,8 +47,8 @@ export class SubscriptionRepository {
 		streamerId,
 		lastNotifiedStreamId,
 		lastNotifiedStreamStatus,
-	}: SubscriptionDto) {
-		this.database
+	}: SubscriptionCreate) {
+		return this.database
 			.prepare(
 				`INSERT INTO ${this.tableName} (userId, streamerId, lastNotifiedStreamId, lastNotifiedStreamStatus) VALUES (?, ?, ?, ?)`,
 			)
@@ -60,9 +61,10 @@ export class SubscriptionRepository {
 			.prepare(`DELETE FROM ${this.tableName} ${whereQuery}`)
 			.run(...whereParams);
 	}
+
 	findFirst(args?: SubscriptionQuery): SubscriptionSchema | null {
 		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
-		const query = `SELECT * FROM ${this.tableName}${whereQuery}`;
+		const query = `SELECT * FROM ${this.tableName} ${whereQuery}`;
 		return this.database
 			.query<SubscriptionSchema, (string | number)[]>(query)
 			.get(...whereParams);
@@ -70,7 +72,7 @@ export class SubscriptionRepository {
 
 	findMany(args?: SubscriptionQuery): SubscriptionSchema[] {
 		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
-		const query = `SELECT * FROM ${this.tableName}${whereQuery}`;
+		const query = `SELECT * FROM ${this.tableName} ${whereQuery}`;
 		return this.database
 			.query<SubscriptionSchema, (string | number)[]>(query)
 			.all(...whereParams);

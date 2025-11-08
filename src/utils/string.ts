@@ -12,7 +12,7 @@ export function buildWhereQuery<Param extends string | number>(
 		params.push(value);
 	}
 
-	return [` WHERE ${conditions.join(' AND ')}`, params];
+	return [`WHERE ${conditions.join(' AND ')}`, params];
 }
 
 export function twitchUserUrl(login: string) {
