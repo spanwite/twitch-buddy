@@ -5,6 +5,9 @@ const ConfigSchema = z.object({
 		clientId: z.string(),
 		clientSecret: z.string(),
 	}),
+	database: z.object({
+		url: z.string(),
+	}),
 });
 
 export const config = ConfigSchema.parse({
@@ -12,6 +15,9 @@ export const config = ConfigSchema.parse({
 	twitch: {
 		clientId: Bun.env.TWITCH_CLIENT_ID,
 		clientSecret: Bun.env.TWITCH_CLIENT_SECRET,
+	},
+	database: {
+		url: Bun.env.DATABASE_URL,
 	},
 	// telegram: {
 	// 	botToken: Bun.env.TELEGRAM_BOT_TOKEN,
