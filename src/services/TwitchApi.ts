@@ -1,15 +1,15 @@
-import type { Logger } from '../logger/logger.interface.ts';
-import { chunk, list } from '../utils/array.ts';
-import { HttpRequestError } from '../utils/error.ts';
 import {
 	type TwitchStreamSchema,
 	TwitchStreamsResponseSchema,
 	TwitchTokenResponseSchema,
 	type TwitchUserSchema,
 	TwitchUsersResponseSchema,
-} from './twitch.schemas.ts';
+} from '../schemas/twitch.ts';
+import type { Logger } from '../types.ts';
+import { chunk, list } from '../utils/array.ts';
+import { HttpRequestError } from '../utils/error.ts';
 
-export class TwitchService {
+export class TwitchApi {
 	protected readonly baseUrl = 'https://api.twitch.tv/helix';
 	protected appAccessToken = '';
 	protected appAccessTokenExpiresAt = 0;

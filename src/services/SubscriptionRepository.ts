@@ -1,5 +1,5 @@
 import type Database from 'bun:sqlite';
-import { buildWhereQuery } from './database.helpers.ts';
+import { buildWhereQuery } from '../utils/string.ts';
 
 export interface SubscriptionSchema {
 	id: number;
@@ -26,10 +26,10 @@ export class SubscriptionRepository {
 
 	constructor(deps: { database: Database }) {
 		this.database = deps.database;
-		this.init();
+		this.createTable();
 	}
 
-	protected init() {
+	protected createTable() {
 		this.database.run(
 			`CREATE TABLE IF NOT EXISTS ${this.tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, userId TEXT NOT NULL, streamerId TEXT NOT NULL, lastNotifiedStreamId TEXT DEFAULT '', lastNotifiedStreamStatus TEXT DEFAULT '');`,
 		);

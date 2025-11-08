@@ -14,3 +14,7 @@ export function buildWhereQuery<Param extends string | number>(
 
 	return [` WHERE ${conditions.join(' AND ')}`, params];
 }
+
+export function twitchUserUrl(login: string) {
+	return `https://twitch.tv/${login}`;
+}

@@ -1,14 +1,4 @@
-import z from 'zod';
-
-const ConfigSchema = z.object({
-	twitch: z.object({
-		clientId: z.string(),
-		clientSecret: z.string(),
-	}),
-	database: z.object({
-		url: z.string(),
-	}),
-});
+import { ConfigSchema } from './schemas/config.ts';
 
 export const config = ConfigSchema.parse({
 	// checkInterval: Bun.env.CHECK_INTERVAL,
