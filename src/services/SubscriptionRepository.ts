@@ -1,23 +1,24 @@
 import type Database from 'bun:sqlite';
+import { list } from '../utils/array.ts';
 import { buildWhereQuery } from '../utils/string.ts';
+import type { OptionalFields } from '../utils/types.ts';
 
 export interface SubscriptionSchema {
-	id: number;
 	userId: string;
 	streamerId: string;
+	streamerLogin: string;
 	lastNotifiedStreamId: string;
 	lastNotifiedStreamStatus: string;
 }
 
-export interface SubscriptionCreate {
-	userId: string;
-	streamerId: string;
-	lastNotifiedStreamId?: string;
-	lastNotifiedStreamStatus?: string;
-}
+type SubscriptionCreate = OptionalFields<
+	SubscriptionSchema,
+	'lastNotifiedStreamId' | 'lastNotifiedStreamStatus'
+>;
 
 interface SubscriptionQuery {
 	where?: Partial<SubscriptionSchema>;
+	distinct?: (keyof SubscriptionSchema)[] | keyof SubscriptionSchema;
 }
 
 export class SubscriptionRepository {
@@ -35,6 +36,7 @@ export class SubscriptionRepository {
 			`CREATE TABLE IF NOT EXISTS ${this.tableName} (
 				userId TEXT NOT NULL,
 				streamerId TEXT NOT NULL,
+				streamerLogin TEXT NOT NULL,
 				lastNotifiedStreamId TEXT DEFAULT '',
 				lastNotifiedStreamStatus TEXT DEFAULT '',
 				PRIMARY KEY(userId, streamerId)
@@ -45,21 +47,30 @@ export class SubscriptionRepository {
 	create({
 		userId,
 		streamerId,
+		streamerLogin,
 		lastNotifiedStreamId,
 		lastNotifiedStreamStatus,
 	}: SubscriptionCreate) {
 		return this.database
 			.prepare(
-				`INSERT INTO ${this.tableName} (userId, streamerId, lastNotifiedStreamId, lastNotifiedStreamStatus) VALUES (?, ?, ?, ?)`,
+				`INSERT INTO ${this.tableName} (userId, streamerId, streamerLogin, lastNotifiedStreamId, lastNotifiedStreamStatus) VALUES (?, ?, ?, ?, ?)`,
 			)
-			.run(userId, streamerId, lastNotifiedStreamId ?? '', lastNotifiedStreamStatus ?? '');
+			.run(
+				userId,
+				streamerId,
+				streamerLogin,
+				lastNotifiedStreamId ?? '',
+				lastNotifiedStreamStatus ?? '',
+			);
 	}
 
-	delete(args?: SubscriptionQuery) {
+	delete(args?: SubscriptionQuery): SubscriptionSchema | null {
 		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
 		return this.database
-			.prepare(`DELETE FROM ${this.tableName} ${whereQuery}`)
-			.run(...whereParams);
+			.prepare<SubscriptionSchema, (string | number)[]>(
+				`DELETE FROM ${this.tableName} ${whereQuery} RETURNING *`,
+			)
+			.get(...whereParams);
 	}
 
 	findFirst(args?: SubscriptionQuery): SubscriptionSchema | null {

@@ -4,6 +4,10 @@ import type { Logger } from '../types.ts';
 import type { SubscriptionRepository } from './SubscriptionRepository.ts';
 import type { TwitchApi } from './TwitchApi.ts';
 
+enum TelegramBotAction {
+	RemoveStreamerWithId = 'REMOVE_STREAMER_WITH_ID',
+}
+
 export class TelegramBotController {
 	protected readonly bot: TelegramBot;
 	protected readonly subsRepo: SubscriptionRepository;
@@ -24,12 +28,15 @@ export class TelegramBotController {
 		this.setupListeners();
 	}
 
-	public setupListeners() {
+	protected setupListeners() {
 		this.bot.onText(/\/start/, this.handleCommandStart.bind(this));
 		this.bot.onText(/\/add/, this.handleCommandAdd.bind(this));
 		this.bot.onText(/\/remove/, this.handleCommandRemove.bind(this));
+		this.bot.onText(/\/list/, this.handleCommandList.bind(this));
 
-		this.logger.info('telegram bot is listening to commands');
+		this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
+
+		this.logger.info('telegram bot is listening to messages');
 	}
 
 	protected handleCommandStart(message: TelegramBot.Message) {
@@ -65,6 +72,7 @@ export class TelegramBotController {
 			this.subsRepo.create({
 				userId: chatId.toString(),
 				streamerId: fetchedStreamer.id,
+				streamerLogin: fetchedStreamer.login,
 			});
 		} catch (error) {
 			if (error instanceof SQLiteError) {
@@ -96,20 +104,10 @@ export class TelegramBotController {
 			);
 		}
 		const streamerLogin = match[1].trim().toLowerCase();
-		const [fetchedStreamer] = await this.twitchApi.fetchUsers({
-			logins: streamerLogin,
+		const deleteSub = this.subsRepo.delete({
+			where: { userId: chatId.toString(), streamerLogin },
 		});
-		if (!fetchedStreamer) {
-			return void this.bot.sendMessage(
-				chatId,
-				`🤷 А я вообще не следил за ${streamerLogin}\nДобавь сначала, если хочешь, чтобы я присматривал 👀`,
-				{ parse_mode: 'Markdown', disable_web_page_preview: true },
-			);
-		}
-		const deleteChanges = this.subsRepo.delete({
-			where: { userId: chatId.toString(), streamerId: fetchedStreamer.id },
-		});
-		if (deleteChanges.changes === 0) {
+		if (deleteSub === null) {
 			return void this.bot.sendMessage(
 				chatId,
 				`🤷 А я вообще не следил за ${streamerLogin}\nДобавь сначала, если хочешь, чтобы я присматривал 👀`,
@@ -121,5 +119,67 @@ export class TelegramBotController {
 			`🗑 ${streamerLogin} — отправлен в архив!\nУведомления? Какие уведомления? 😏`,
 			{ parse_mode: 'Markdown', disable_web_page_preview: true },
 		);
+	}
+
+	protected async handleCommandList(message: TelegramBot.Message): Promise<void> {
+		const chatId = message.chat.id;
+		const userSubs = this.subsRepo.findMany({
+			where: { userId: chatId.toString() },
+		});
+		if (userSubs.length === 0) {
+			return void this.bot.sendMessage(
+				chatId,
+				`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
+				{ parse_mode: 'Markdown' },
+			);
+		}
+		const streamersButtons: TelegramBot.InlineKeyboardButton[] = userSubs.map(
+			({ streamerLogin, streamerId }) => ({
+				text: streamerLogin,
+				callback_data: `${TelegramBotAction.RemoveStreamerWithId}=${streamerId}`,
+			}),
+		);
+		this.bot.sendMessage(
+			chatId,
+			`❌ Хочешь перестать следить за кем-то?\nТкни по нику — и он пропадёт из списка 👇`,
+			{
+				reply_markup: {
+					inline_keyboard: [streamersButtons],
+					one_time_keyboard: true,
+				},
+			},
+		);
+	}
+
+	protected async handleCallbackQuery(query: TelegramBot.CallbackQuery): Promise<void> {
+		const { data, message } = query;
+		if (!data || !message) {
+			return;
+		}
+		const {
+			message_id: messageId,
+			chat: { id: chatId },
+		} = message;
+		const [action, streamerId] = data.split('=');
+
+		if (action === TelegramBotAction.RemoveStreamerWithId) {
+			this.subsRepo.delete({
+				where: { userId: chatId.toString(), streamerId },
+			});
+			const streamerButtons = message.reply_markup?.inline_keyboard?.[0] ?? [];
+			const newStreamerButtons = streamerButtons.filter(
+				({ callback_data }) => callback_data?.split('=')[1] !== streamerId,
+			);
+			if (newStreamerButtons.length === 0) {
+				this.bot.editMessageText(
+					`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
+					{ message_id: messageId, chat_id: chatId, parse_mode: 'Markdown' },
+				);
+			}
+			this.bot.editMessageReplyMarkup(
+				{ inline_keyboard: [newStreamerButtons] },
+				{ message_id: messageId, chat_id: chatId },
+			);
+		}
 	}
 }
