@@ -91,6 +91,7 @@ export class TelegramBotController {
 			`🎉 Всё чётко! ${streamerLogin} теперь под наблюдением 👀\nДам знать, как только начнётся стрим 🎥`,
 			{ parse_mode: 'Markdown', disable_web_page_preview: true },
 		);
+		this.logger.info(`new subscription added: user #${chatId} to streamer ${streamerLogin}`);
 	}
 
 	protected async handleCommandRemove(message: TelegramBot.Message): Promise<void> {

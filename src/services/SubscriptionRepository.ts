@@ -1,9 +1,18 @@
 import type Database from 'bun:sqlite';
+import type { SQLQueryBindings } from 'bun:sqlite';
 import { list } from '../utils/array.ts';
-import { buildWhereQuery } from '../utils/string.ts';
-import type { OptionalFields } from '../utils/types.ts';
+import {
+	buildDistinctClause,
+	buildReturningClause,
+	buildSelectClause,
+	buildSql,
+	buildSqlParams,
+	buildSqlWhereClause,
+	firstTruthy,
+} from '../utils/string.ts';
+import type { OptionalFields, PickByValue } from '../utils/types.ts';
 
-export interface SubscriptionSchema {
+interface Subscription {
 	userId: string;
 	streamerId: string;
 	streamerLogin: string;
@@ -12,14 +21,34 @@ export interface SubscriptionSchema {
 }
 
 type SubscriptionCreate = OptionalFields<
-	SubscriptionSchema,
+	Subscription,
 	'lastNotifiedStreamId' | 'lastNotifiedStreamStatus'
 >;
 
-interface SubscriptionQuery {
-	where?: Partial<SubscriptionSchema>;
-	distinct?: (keyof SubscriptionSchema)[] | keyof SubscriptionSchema;
+interface SubscriptionArgs {
+	data: Partial<Subscription>;
+	where?: {
+		[Key in keyof Subscription]?: Subscription[Key] | { not: Subscription[Key] };
+	};
+	distinct?: (keyof Subscription)[] | keyof Subscription;
+	select?: Partial<Record<keyof Subscription, boolean>>;
 }
+
+type SubscriptionUpdateManyArgs = Pick<SubscriptionArgs, 'data' | 'where' | 'select'>;
+type SubscriptionFindManyArgs = Pick<SubscriptionArgs, 'where' | 'distinct' | 'select'>;
+type SubscriptionFindFirstArgs = Pick<SubscriptionArgs, 'where'>;
+type SubscriptionDeleteArgs = Pick<SubscriptionArgs, 'where' | 'select'>;
+
+type SubscriptionReturn<
+	Args extends Pick<SubscriptionArgs, 'distinct' | 'select'>,
+	Distinct = Args['distinct'],
+> = Distinct extends keyof Subscription
+	? Record<Distinct, Subscription[Distinct]>
+	: Distinct extends (keyof Subscription)[]
+		? Pick<Subscription, Extract<Distinct[number], keyof Subscription>>
+		: Args extends Pick<SubscriptionArgs, 'select'>
+			? Pick<Subscription, keyof PickByValue<Args['select'], true>>
+			: Subscription;
 
 export class SubscriptionRepository {
 	protected readonly database: Database;
@@ -64,28 +93,71 @@ export class SubscriptionRepository {
 			);
 	}
 
-	delete(args?: SubscriptionQuery): SubscriptionSchema | null {
-		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
-		return this.database
-			.prepare<SubscriptionSchema, (string | number)[]>(
-				`DELETE FROM ${this.tableName} ${whereQuery} RETURNING *`,
-			)
-			.get(...whereParams);
+	update<Args extends SubscriptionUpdateManyArgs, Return = SubscriptionReturn<Args>>({
+		data,
+		where,
+		select,
+	}: Args): Return | null {
+		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
+		const sql = buildSql(
+			'UPDATE',
+			this.tableName,
+			'SET',
+			Object.keys(data).map((key) => `${key} = ?`),
+			whereSql,
+			buildReturningClause(select),
+		);
+		const params = buildSqlParams(data, whereParams);
+		return this.database.prepare<Return, SQLQueryBindings[]>(sql).get(...params);
 	}
 
-	findFirst(args?: SubscriptionQuery): SubscriptionSchema | null {
-		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
-		const query = `SELECT * FROM ${this.tableName} ${whereQuery}`;
-		return this.database
-			.query<SubscriptionSchema, (string | number)[]>(query)
-			.get(...whereParams);
+	updateMany<Args extends SubscriptionUpdateManyArgs, Return = SubscriptionReturn<Args>>({
+		data,
+		where,
+		select,
+	}: Args): Return[] {
+		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
+		const sql = buildSql(
+			'UPDATE',
+			this.tableName,
+			'SET',
+			Object.keys(data).map((key) => `${key} = ?`),
+			whereSql,
+			buildReturningClause(select),
+		);
+		const params = buildSqlParams(data, whereParams);
+		return this.database.prepare<Return, SQLQueryBindings[]>(sql).all(...params);
 	}
 
-	findMany(args?: SubscriptionQuery): SubscriptionSchema[] {
-		const [whereQuery, whereParams] = buildWhereQuery(args?.where);
-		const query = `SELECT * FROM ${this.tableName} ${whereQuery}`;
-		return this.database
-			.query<SubscriptionSchema, (string | number)[]>(query)
-			.all(...whereParams);
+	delete<Args extends SubscriptionDeleteArgs, Return = SubscriptionReturn<Args>>(
+		{ where, select }: Args = <Args>{},
+	): Return | null {
+		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
+		const sql = buildSql('DELETE FROM', this.tableName, whereSql, buildReturningClause(select));
+		const params = buildSqlParams(whereParams);
+		return this.database.prepare<Return, SQLQueryBindings[]>(sql).get(...params);
+	}
+
+	findFirst<Args extends SubscriptionFindFirstArgs>(
+		{ where }: Args = <Args>{},
+	): Subscription | null {
+		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
+		const query = buildSql('SELECT * FROM', this.tableName, whereSql);
+		const params = buildSqlParams(whereParams);
+		return this.database.query<Subscription, SQLQueryBindings[]>(query).get(...params);
+	}
+
+	findMany<Args extends SubscriptionFindManyArgs, Return = SubscriptionReturn<Args>>(
+		{ where, distinct, select }: Args = <Args>{},
+	): Return[] {
+		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
+		const query = buildSql(
+			firstTruthy([distinct && buildDistinctClause(distinct), buildSelectClause(select)]),
+			'FROM',
+			this.tableName,
+			whereSql,
+		);
+		const params = buildSqlParams(whereParams);
+		return this.database.query<Return, SQLQueryBindings[]>(query).all(...params);
 	}
 }
