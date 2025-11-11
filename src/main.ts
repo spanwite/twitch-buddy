@@ -11,7 +11,10 @@ const telegramBot = new TelegramBot(config.telegram.botToken, {
 });
 const database = new Database(config.database.url);
 const subsRepo = new SubscriptionRepository({ database });
-const twitchApi = new TwitchApi(config.twitch, { logger });
+const twitchApi = new TwitchApi(
+	{ ...config.twitch, tokenFile: 'twitchTokens.local.json' },
+	{ logger },
+);
 
 new TelegramBotController({
 	telegramBot,

@@ -18,6 +18,7 @@ const TwitchStreamSchema = z.object({
 	game_name: z.string(),
 	started_at: z.string(),
 	user_id: z.string(),
+	user_login: z.string(),
 	title: z.string(),
 	viewer_count: z.number(),
 });
@@ -31,4 +32,9 @@ export const TwitchStreamsResponseSchema = z.object({
 export const TwitchTokenResponseSchema = z.object({
 	access_token: z.string(),
 	expires_in: z.number(),
+});
+
+export const TwitchTokenJsonSchema = z.object({
+	token: z.string(),
+	expiresAt: z.number(),
 });

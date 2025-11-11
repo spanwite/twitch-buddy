@@ -1,6 +1,8 @@
+import { logger } from '../Logger.ts';
 import {
 	type TwitchStreamSchema,
 	TwitchStreamsResponseSchema,
+	TwitchTokenJsonSchema,
 	TwitchTokenResponseSchema,
 	type TwitchUserSchema,
 	TwitchUsersResponseSchema,
@@ -16,7 +18,11 @@ export class TwitchApi {
 	protected readonly logger: Logger;
 
 	constructor(
-		protected readonly config: { clientId: string; clientSecret: string },
+		protected readonly config: {
+			clientId: string;
+			clientSecret: string;
+			tokenFile?: string;
+		},
 		deps: { logger: Logger },
 	) {
 		this.logger = deps.logger;
@@ -26,11 +32,13 @@ export class TwitchApi {
 		ids?: string[] | string;
 		logins?: string[] | string;
 	}): Promise<TwitchUserSchema[]> {
-		await this.updateAppAccessTokenIfExpired();
-
 		const idItems = list(query?.ids ?? []).map((id) => `id=${id}`);
 		const loginItems = list(query?.logins ?? []).map((login) => `login=${login}`);
 		const queryItems = ([] as Array<string>).concat(idItems, loginItems);
+
+		if (queryItems.length === 0) return [];
+		await this.updateAppAccessTokenIfExpired();
+
 		const chunks = chunk(queryItems, 100);
 		const results: TwitchUserSchema[] = [];
 
@@ -56,11 +64,13 @@ export class TwitchApi {
 		userIds?: string[] | string;
 		userLogins?: string[] | string;
 	}): Promise<TwitchStreamSchema[]> {
-		await this.updateAppAccessTokenIfExpired();
-
 		const userIdItems = list(query?.userIds ?? []).map((id) => `user_id=${id}`);
 		const userLoginItems = list(query?.userLogins ?? []).map((login) => `user_login=${login}`);
 		const queryItems = ([] as Array<string>).concat(userIdItems, userLoginItems);
+
+		if (queryItems.length === 0) return [];
+		await this.updateAppAccessTokenIfExpired();
+
 		const chunks = chunk(queryItems, 100);
 		const results: TwitchStreamSchema[] = [];
 
@@ -83,18 +93,40 @@ export class TwitchApi {
 	}
 
 	protected async updateAppAccessTokenIfExpired() {
+		const { tokenFile } = this.config;
+		if (!this.appAccessToken && tokenFile) {
+			const tokenData = await Bun.file(tokenFile).json();
+			const { data, success } = TwitchTokenJsonSchema.safeParse(tokenData);
+			if (success) {
+				this.appAccessToken = data.token;
+				this.appAccessTokenExpiresAt = data.expiresAt;
+				logger.info(`twitch appAccessToken loaded from a file`);
+			}
+		}
 		if (Date.now() >= this.appAccessTokenExpiresAt) {
-			this.logger.info('twitch app_access_token is expired');
+			this.logger.info('twitch appAppAccessToken is expired');
 			await this.updateAppAccessToken();
 		}
 	}
 
 	protected async updateAppAccessToken() {
 		const { access_token, expires_in } = await this.fetchAppAccessToken();
+		const { tokenFile } = this.config;
 
 		this.appAccessToken = access_token;
 		this.appAccessTokenExpiresAt = Date.now() + expires_in * 1000;
-		this.logger.info('twitch app_access_token has been updated');
+		this.logger.info('twitch appAccessToken updated from server');
+
+		if (tokenFile) {
+			await Bun.write(
+				tokenFile,
+				JSON.stringify({
+					token: access_token,
+					expiresAt: this.appAccessTokenExpiresAt,
+				}),
+			);
+			this.logger.info(`token info wrote to a file ${tokenFile}`);
+		}
 	}
 
 	protected async fetchAppAccessToken() {
