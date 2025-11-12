@@ -1,6 +1,5 @@
 import type Database from 'bun:sqlite';
 import type { SQLQueryBindings } from 'bun:sqlite';
-import { list } from '../utils/array.ts';
 import {
 	buildDistinctClause,
 	buildReturningClause,
@@ -8,7 +7,6 @@ import {
 	buildSql,
 	buildSqlParams,
 	buildSqlWhereClause,
-	firstTruthy,
 } from '../utils/string.ts';
 import type { OptionalFields, PickByValue } from '../utils/types.ts';
 
@@ -152,7 +150,7 @@ export class SubscriptionRepository {
 	): Return[] {
 		const [whereSql, whereParams] = where ? buildSqlWhereClause(where) : ['', []];
 		const query = buildSql(
-			firstTruthy([distinct && buildDistinctClause(distinct), buildSelectClause(select)]),
+			[distinct && buildDistinctClause(distinct), buildSelectClause(select)].find(Boolean),
 			'FROM',
 			this.tableName,
 			whereSql,

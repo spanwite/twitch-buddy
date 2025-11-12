@@ -45,10 +45,6 @@ export function buildDistinctClause(distinct: string | string[]): string {
 	return `SELECT DISTINCT ${distinct ? list(distinct).join(', ') : '*'}`;
 }
 
-export function firstTruthy<T>(arr: T[]): T | undefined {
-	return arr.find(Boolean);
-}
-
 export function twitchUserUrl(login: string) {
 	return `https://twitch.tv/${login}`;
 }
