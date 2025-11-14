@@ -156,4 +156,8 @@ export class TwitchApi {
 			'Content-Type': 'application/json',
 		};
 	}
+
+	static generateUserUrl(userLogin: string) {
+		return `https://twitch.tv/${userLogin}`;
+	}
 }

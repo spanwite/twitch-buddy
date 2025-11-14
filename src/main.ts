@@ -1,12 +1,12 @@
 import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from './config.ts';
+import { streamEnded, streamStarted } from './helpers/telegramBotMessages.ts';
 import { logger } from './Logger.ts';
 import type { TwitchStreamSchema } from './schemas/twitch.ts';
 import { SubscriptionRepository } from './services/SubscriptionRepository.ts';
 import { TelegramBotController } from './services/TelegramBotController.ts';
 import { TwitchApi } from './services/TwitchApi.ts';
-import { markdownLink, twitchUserUrl } from './utils/string.ts';
 
 const telegramBot = new TelegramBot(config.telegram.botToken, {
 	polling: true,
@@ -61,22 +61,12 @@ async function notifyUsersAboutStartedStreams() {
 			},
 			select: { userId: true, lastNotifiedStreamId: true },
 		});
-		if (usersToNotify.length === 0) {
-			continue;
-		}
-		const { title, game_name, started_at, user_login, viewer_count } = stream;
-		const streamerUrl = twitchUserUrl(user_login);
-		const streamerText = markdownLink(user_login, streamerUrl);
-		const message = `🔴 ${streamerText} — в эфире!\n🗂 Категория: ${game_name}\n📝 Название стрима: ${title}\n🕒 Онлайн с: ${started_at}\n👀 Сейчас смотрят: ${viewer_count} зрителей`;
-		const options: TelegramBot.SendMessageOptions = {
-			parse_mode: 'Markdown',
-			disable_web_page_preview: true,
-			reply_markup: {
-				inline_keyboard: [[{ text: '🚀 Залететь на стрим', url: streamerUrl }]],
-			},
-		};
+		if (usersToNotify.length === 0) continue;
+
+		const streamStartedMessage = streamStarted(stream);
+
 		for (const { userId } of usersToNotify) {
-			await telegramBot.sendMessage(userId, message, options);
+			await telegramBot.sendMessage(userId, ...streamStartedMessage);
 			subsRepo.updateMany({
 				data: { lastNotifiedStreamId: stream.id },
 				where: {
@@ -100,16 +90,11 @@ async function notifyUsersAboutEndedStreams() {
 			endedStreams = endedStreams.filter((s) => s.id !== stream.id);
 			continue;
 		}
-		const { title, game_name, started_at, user_login, viewer_count } = stream;
-		const streamerUrl = twitchUserUrl(user_login);
-		const streamerText = markdownLink(user_login, streamerUrl);
-		const message = `⚫ ${streamerText} завершил(а) стрим\n📝Название было: ${title}`;
-		const options: TelegramBot.SendMessageOptions = {
-			parse_mode: 'Markdown',
-			disable_web_page_preview: true,
-		};
+
+		const streamEndedMessage = streamEnded(stream);
+
 		for (const { userId } of usersToNotify) {
-			telegramBot.sendMessage(userId, message, options);
+			telegramBot.sendMessage(userId, ...streamEndedMessage);
 			subsRepo.update({
 				data: { lastNotifiedStreamId: '' },
 				where: { userId, lastNotifiedStreamId: stream.id },
