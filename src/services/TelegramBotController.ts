@@ -70,9 +70,12 @@ export class TelegramBotController {
 		}
 		try {
 			this.subsRepo.create({
-				userId: chatId.toString(),
-				streamerId: fetchedStreamer.id,
-				streamerLogin: fetchedStreamer.login,
+				data: {
+					userId: chatId.toString(),
+					streamerId: fetchedStreamer.id,
+					streamerLogin: fetchedStreamer.login,
+					lastNotifiedStreamId: '',
+				},
 			});
 		} catch (error) {
 			if (error instanceof SQLiteError) {

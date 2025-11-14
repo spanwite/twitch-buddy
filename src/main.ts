@@ -12,7 +12,7 @@ const telegramBot = new TelegramBot(config.telegram.botToken, {
 	polling: true,
 });
 const database = new Database(config.database.url);
-const subsRepo = new SubscriptionRepository({ database });
+const subsRepo = new SubscriptionRepository(database);
 const twitchApi = new TwitchApi(
 	{ ...config.twitch, tokenFile: 'twitchTokens.local.json' },
 	{ logger },
