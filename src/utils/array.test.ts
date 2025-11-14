@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { chunk, list } from './array.ts';
+import { chunk, list, pickRandom } from './array.ts';
 
 describe('chunk', () => {
 	it('splits array into chunks of given size', () => {
@@ -39,5 +39,27 @@ describe('list', () => {
 		expect(list('a')).toEqual(['a']);
 		expect(list(1)).toEqual([1]);
 		expect(list(false)).toEqual([false]);
+	});
+});
+
+describe('pickRandom', () => {
+	it('returns undefined for empty array', () => {
+		expect(pickRandom([])).toBeUndefined();
+	});
+
+	it('returns the only element for single-element array', () => {
+		expect(pickRandom([42])).toBe(42);
+	});
+
+	it('returns an element from the array', () => {
+		const arr = [1, 2, 3, 4, 5];
+		const result = pickRandom(arr);
+		expect(arr).toContain(result);
+	});
+
+	it('works with string arrays', () => {
+		const arr = ['a', 'b', 'c'];
+		const result = pickRandom(arr);
+		expect(arr).toContain(result);
 	});
 });

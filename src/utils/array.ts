@@ -15,3 +15,8 @@ export function list<T>(value: T | T[]): T[] {
 	}
 	return [value];
 }
+
+export function pickRandom<T>(array: T[]): T | undefined {
+	const randomIndex = Math.floor(Math.random() * array.length);
+	return array[randomIndex];
+}
