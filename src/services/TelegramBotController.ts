@@ -94,7 +94,7 @@ export class TelegramBotController {
 			`🎉 Всё чётко! ${streamerLogin} теперь под наблюдением 👀\nДам знать, как только начнётся стрим 🎥`,
 			{ parse_mode: 'Markdown', disable_web_page_preview: true },
 		);
-		this.logger.info(`new subscription added: user #${chatId} to streamer ${streamerLogin}`);
+		this.logger.info(`added subscription from user ${chatId} to streamer ${streamerLogin}`);
 	}
 
 	protected async handleCommandRemove(message: TelegramBot.Message): Promise<void> {
@@ -123,6 +123,7 @@ export class TelegramBotController {
 			`🗑 ${streamerLogin} — отправлен в архив!\nУведомления? Какие уведомления? 😏`,
 			{ parse_mode: 'Markdown', disable_web_page_preview: true },
 		);
+		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerLogin}`);
 	}
 
 	protected async handleCommandList(message: TelegramBot.Message): Promise<void> {
@@ -170,6 +171,7 @@ export class TelegramBotController {
 			this.subsRepo.delete({
 				where: { userId: chatId.toString(), streamerId },
 			});
+			this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerId}`);
 			const streamerButtons = message.reply_markup?.inline_keyboard?.[0] ?? [];
 			const newStreamerButtons = streamerButtons.filter(
 				({ callback_data }) => callback_data?.split('=')[1] !== streamerId,

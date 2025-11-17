@@ -1,4 +1,3 @@
-import { logger } from '../Logger.ts';
 import {
 	type TwitchStreamSchema,
 	TwitchStreamsResponseSchema,
@@ -100,11 +99,14 @@ export class TwitchApi {
 			if (success) {
 				this.appAccessToken = data.token;
 				this.appAccessTokenExpiresAt = data.expiresAt;
-				logger.info(`twitch appAccessToken loaded from a file`);
+				this.logger.info(`appAccessToken loaded from a file`);
 			}
+			this.logger.info(
+				`appAccessToken will expire at ${new Date(this.appAccessTokenExpiresAt).toISOString()}`,
+			);
 		}
 		if (Date.now() >= this.appAccessTokenExpiresAt) {
-			this.logger.info('twitch appAppAccessToken is expired');
+			this.logger.info('appAccessToken is expired');
 			await this.updateAppAccessToken();
 		}
 	}
@@ -115,7 +117,11 @@ export class TwitchApi {
 
 		this.appAccessToken = access_token;
 		this.appAccessTokenExpiresAt = Date.now() + expires_in * 1000;
-		this.logger.info('twitch appAccessToken updated from server');
+		this.logger.info('appAccessToken updated from server');
+
+		this.logger.info(
+			`appAccessToken will expire at ${new Date(this.appAccessTokenExpiresAt).toISOString()}`,
+		);
 
 		if (tokenFile) {
 			await Bun.write(
@@ -125,7 +131,7 @@ export class TwitchApi {
 					expiresAt: this.appAccessTokenExpiresAt,
 				}),
 			);
-			this.logger.info(`token info wrote to a file ${tokenFile}`);
+			this.logger.info(`appAccessToken saved to a file ${tokenFile}`);
 		}
 	}
 

@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from './config.ts';
 import { streamEnded, streamStarted } from './helpers/telegramBotMessages.ts';
-import { logger } from './Logger.ts';
+import { logger } from './logger.ts';
 import type { TwitchStreamSchema } from './schemas/twitch.ts';
 import { SubscriptionRepository } from './services/SubscriptionRepository.ts';
 import { TelegramBotController } from './services/TelegramBotController.ts';
@@ -15,7 +15,7 @@ const database = new Database(config.database.url);
 const subsRepo = new SubscriptionRepository(database);
 const twitchApi = new TwitchApi(
 	{ ...config.twitch, tokenFile: 'twitchTokens.local.json' },
-	{ logger },
+	{ logger: logger.child({ context: 'twitch' }) },
 );
 
 new TelegramBotController({
@@ -40,7 +40,7 @@ async function main() {
 		userIds: uniqueStreamerIds,
 	});
 	logger.info(
-		`streamers checked – ${fetchedStreams.length} of ${uniqueStreamerIds.length} is online`,
+		`from ${uniqueStreamerIds.length} streamers found ${fetchedStreams.length} active streams`,
 	);
 	for (const stream of onlineStreams) {
 		if (fetchedStreams.find((s) => s.id === stream.id)) continue;
