@@ -25,35 +25,34 @@ new TelegramBotController({
 	logger,
 });
 
-let onlineStreams: TwitchStreamSchema[] = [];
-let endedStreams: TwitchStreamSchema[] = [];
+let lastOnlineStreams: TwitchStreamSchema[] = [];
 
 main();
-setInterval(main, 1000 * 10);
+setInterval(main, 1000 * 60 * 1);
 
 async function main() {
 	const uniqueStreamerIds = subsRepo
-		.findMany({ distinct: ['streamerId'] })
+		.findMany({ distinct: 'streamerId' })
 		.map((sub) => sub.streamerId);
-
 	const fetchedStreams = await twitchApi.fetchStreams({
 		userIds: uniqueStreamerIds,
 	});
 	logger.info(
 		`from ${uniqueStreamerIds.length} streamers found ${fetchedStreams.length} active streams`,
 	);
-	for (const stream of onlineStreams) {
-		if (fetchedStreams.find((s) => s.id === stream.id)) continue;
-		endedStreams.push(stream);
-	}
-	onlineStreams = fetchedStreams;
+	const endedStreams = lastOnlineStreams.filter(
+		(stream) => !fetchedStreams.find((s) => s.id === stream.id),
+	);
+	lastOnlineStreams = fetchedStreams;
 
-	notifyUsersAboutStartedStreams();
-	notifyUsersAboutEndedStreams();
+	notifyUsersAboutOnlineStreams(lastOnlineStreams);
+	notifyUsersAboutEndedStreams(endedStreams);
 }
 
-async function notifyUsersAboutStartedStreams() {
-	for (const stream of onlineStreams) {
+async function notifyUsersAboutOnlineStreams(streams: TwitchStreamSchema[]) {
+	for (const stream of streams) {
+		logger.info(`notifying users about ${stream.user_login}'s stream start`);
+
 		const usersToNotify = subsRepo.findMany({
 			where: {
 				streamerId: stream.user_id,
@@ -75,21 +74,19 @@ async function notifyUsersAboutStartedStreams() {
 				},
 			});
 			logger.info(
-				`notification about ${stream.user_login}'s new stream sent to user #${userId}`,
+				`sent notification to user ${userId} about ${stream.user_login}'s stream start`,
 			);
 		}
 	}
 }
 
-async function notifyUsersAboutEndedStreams() {
-	for (const stream of endedStreams) {
+async function notifyUsersAboutEndedStreams(streams: TwitchStreamSchema[]) {
+	for (const stream of streams) {
+		logger.info(`notifying users about ${stream.user_login}'s stream end`);
+
 		const usersToNotify = subsRepo.findMany({
 			where: { lastNotifiedStreamId: stream.id },
 		});
-		if (usersToNotify.length === 0) {
-			endedStreams = endedStreams.filter((s) => s.id !== stream.id);
-			continue;
-		}
 
 		const streamEndedMessage = streamEnded(stream);
 
@@ -100,7 +97,7 @@ async function notifyUsersAboutEndedStreams() {
 				where: { userId, lastNotifiedStreamId: stream.id },
 			});
 			logger.info(
-				`notification about ${stream.user_login}'s stream end sent to user #${userId}`,
+				`sent notification to user ${userId} about ${stream.user_login}'s stream end`,
 			);
 		}
 	}
