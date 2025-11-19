@@ -1,4 +1,11 @@
-import { ConfigSchema } from './schemas/config.ts';
+import z from 'zod';
+
+export const ConfigSchema = z.object({
+	twitchClientId: z.string(),
+	twitchClientSecret: z.string(),
+	databaseUrl: z.string(),
+	telegramBotToken: z.string(),
+});
 
 export const config = ConfigSchema.parse({
 	twitchClientId: Bun.env.TWITCH_CLIENT_ID,
