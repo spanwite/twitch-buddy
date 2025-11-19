@@ -1,4 +1,3 @@
-import { SQLiteError } from 'bun:sqlite';
 import type TelegramBot from 'node-telegram-bot-api';
 import type { Logger } from '../types.ts';
 import type { SubscriptionRepository } from './SubscriptionRepository.ts';
@@ -68,28 +67,25 @@ export class TelegramBotController {
 				{ parse_mode: 'Markdown', disable_web_page_preview: true },
 			);
 		}
-		try {
-			this.subsRepo.create({
-				data: {
-					userId: chatId.toString(),
-					streamerId: fetchedStreamer.id,
-					streamerLogin: fetchedStreamer.login,
-					lastNotifiedStreamId: '',
-				},
-			});
-		} catch (error) {
-			if (error instanceof SQLiteError) {
-				if (error.errno === 1555) {
-					return void this.bot.sendMessage(
-						chatId,
-						`${streamerLogin} уже добавлен 🎮\nУведомлю, как только выйдет в онлайн 🌐`,
-						{ parse_mode: 'Markdown', disable_web_page_preview: true },
-					);
-				}
-			}
-			throw error;
+		const foundSub = this.subsRepo.findFirst({
+			where: { userId: chatId.toString(), streamerId: fetchedStreamer.id },
+		});
+		if (foundSub) {
+			return void this.bot.sendMessage(
+				chatId,
+				`${streamerLogin} уже добавлен 🎮\nУведомлю, как только выйдет в онлайн 🌐`,
+				{ parse_mode: 'Markdown', disable_web_page_preview: true },
+			);
 		}
-		this.bot.sendMessage(
+		this.subsRepo.create({
+			data: {
+				userId: chatId.toString(),
+				streamerId: fetchedStreamer.id,
+				streamerLogin: fetchedStreamer.login,
+				lastNotifiedStreamId: '',
+			},
+		});
+		await this.bot.sendMessage(
 			chatId,
 			`🎉 Всё чётко! ${streamerLogin} теперь под наблюдением 👀\nДам знать, как только начнётся стрим 🎥`,
 			{ parse_mode: 'Markdown', disable_web_page_preview: true },
