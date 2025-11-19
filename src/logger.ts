@@ -2,9 +2,8 @@ import { createLogger, format, transports } from 'winston';
 
 const { printf, colorize, timestamp, combine, json } = format;
 
-const myFormat = printf(({ level, message, timestamp, context }) => {
-	const contextLabel = context ? `(${context})` : '';
-	return `[${timestamp}] ${level}${contextLabel}: ${message}`;
+const myFormat = printf(({ level, message, timestamp }) => {
+	return `[${timestamp}] ${level}: ${message}`;
 });
 
 export const logger = createLogger({
