@@ -1,7 +1,7 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import type { Logger } from '../types.ts';
+import type { TwitchSevice } from '../Twitch/Service.ts';
 import type { SubscriptionRepository } from './SubscriptionRepository.ts';
-import type { TwitchApi } from './TwitchApi.ts';
 
 enum TelegramBotAction {
 	RemoveStreamerWithId = 'REMOVE_STREAMER_WITH_ID',
@@ -10,18 +10,18 @@ enum TelegramBotAction {
 export class TelegramBotController {
 	protected readonly bot: TelegramBot;
 	protected readonly subsRepo: SubscriptionRepository;
-	protected readonly twitchApi: TwitchApi;
 	protected readonly logger: Logger;
+	protected readonly twitchService: TwitchSevice;
 
 	constructor(deps: {
 		telegramBot: TelegramBot;
 		subsRepo: SubscriptionRepository;
-		twitchApi: TwitchApi;
 		logger: Logger;
+		twitchService: TwitchSevice;
 	}) {
 		this.bot = deps.telegramBot;
 		this.subsRepo = deps.subsRepo;
-		this.twitchApi = deps.twitchApi;
+		this.twitchService = deps.twitchService;
 		this.logger = deps.logger;
 
 		this.setupListeners();
@@ -57,9 +57,7 @@ export class TelegramBotController {
 			);
 		}
 		const streamerLogin = match[1].toLowerCase().trim();
-		const [fetchedStreamer] = await this.twitchApi.fetchUsers({
-			logins: streamerLogin,
-		});
+		const fetchedStreamer = await this.twitchService.fetchOneUserByLogin(streamerLogin);
 		if (!fetchedStreamer) {
 			return void this.bot.sendMessage(
 				chatId,

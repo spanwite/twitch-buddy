@@ -1,12 +1,12 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { TwitchStreamSchema } from '../schemas/twitch.ts';
-import { TwitchApi } from '../services/TwitchApi.ts';
+import type { TwitchStream } from '../Twitch/Schema.ts';
+import { generateTwitchUserUrl } from '../Twitch/Utils.ts';
 
 type ReturnMessage = [string, TelegramBot.SendMessageOptions];
 
-export function streamStarted(stream: TwitchStreamSchema): ReturnMessage {
+export function streamStarted(stream: TwitchStream): ReturnMessage {
 	const { title, game_name, started_at, user_login, viewer_count } = stream;
-	const streamerUrl = TwitchApi.generateUserUrl(user_login);
+	const streamerUrl = generateTwitchUserUrl(user_login);
 	const streamerText = markdownLink(user_login, streamerUrl);
 
 	const messageText = [
@@ -27,9 +27,9 @@ export function streamStarted(stream: TwitchStreamSchema): ReturnMessage {
 	return [messageText, messageOptions];
 }
 
-export function streamEnded(stream: TwitchStreamSchema): ReturnMessage {
+export function streamEnded(stream: TwitchStream): ReturnMessage {
 	const { title, user_login } = stream;
-	const streamerUrl = TwitchApi.generateUserUrl(user_login);
+	const streamerUrl = generateTwitchUserUrl(user_login);
 	const streamerText = markdownLink(user_login, streamerUrl);
 
 	const messageText = [`⚫ ${streamerText} завершил(а) стрим`, `📝 Название было: ${title}`].join(

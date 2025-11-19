@@ -3,29 +3,29 @@ import TelegramBot from 'node-telegram-bot-api';
 import { config } from './config.ts';
 import { streamEnded, streamStarted } from './helpers/telegramBotMessages.ts';
 import { logger } from './logger.ts';
-import type { TwitchStreamSchema } from './schemas/twitch.ts';
 import { SubscriptionRepository } from './services/SubscriptionRepository.ts';
 import { TelegramBotController } from './services/TelegramBotController.ts';
-import { TwitchApi } from './services/TwitchApi.ts';
+import type { TwitchStream } from './Twitch/Schema.ts';
+import { TwitchSevice } from './Twitch/Service.ts';
 
 const telegramBot = new TelegramBot(config.telegram.botToken, {
 	polling: true,
 });
 const database = new Database(config.database.url);
 const subsRepo = new SubscriptionRepository(database);
-const twitchApi = new TwitchApi(
-	{ ...config.twitch, tokenFile: 'twitchTokens.local.json' },
-	{ logger: logger.child({ context: 'twitch' }) },
-);
+const twitchService = new TwitchSevice({
+	config: { ...config.twitch, saveTokenToFile: 'twitchTokens.local.json' },
+	logger,
+});
 
 new TelegramBotController({
 	telegramBot,
 	subsRepo,
-	twitchApi,
+	twitchService,
 	logger,
 });
 
-let lastOnlineStreams: TwitchStreamSchema[] = [];
+let lastOnlineStreams: TwitchStream[] = [];
 
 main();
 setInterval(main, 1000 * 60 * 1);
@@ -34,9 +34,7 @@ async function main() {
 	const uniqueStreamerIds = subsRepo
 		.findMany({ distinct: 'streamerId' })
 		.map((sub) => sub.streamerId);
-	const fetchedStreams = await twitchApi.fetchStreams({
-		userIds: uniqueStreamerIds,
-	});
+	const fetchedStreams = await twitchService.fetchManyStreamsByUserIds(uniqueStreamerIds);
 	logger.info(
 		`from ${uniqueStreamerIds.length} streamers found ${fetchedStreams.length} active streams`,
 	);
@@ -49,7 +47,7 @@ async function main() {
 	notifyUsersAboutEndedStreams(endedStreams);
 }
 
-async function notifyUsersAboutOnlineStreams(streams: TwitchStreamSchema[]) {
+async function notifyUsersAboutOnlineStreams(streams: TwitchStream[]) {
 	for (const stream of streams) {
 		logger.info(`notifying users about ${stream.user_login}'s stream start`);
 
@@ -80,7 +78,7 @@ async function notifyUsersAboutOnlineStreams(streams: TwitchStreamSchema[]) {
 	}
 }
 
-async function notifyUsersAboutEndedStreams(streams: TwitchStreamSchema[]) {
+async function notifyUsersAboutEndedStreams(streams: TwitchStream[]) {
 	for (const stream of streams) {
 		logger.info(`notifying users about ${stream.user_login}'s stream end`);
 

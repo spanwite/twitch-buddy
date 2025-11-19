@@ -6,7 +6,7 @@ const TwitchUserSchema = z.object({
 	display_name: z.string(),
 	login: z.string(),
 });
-export type TwitchUserSchema = z.infer<typeof TwitchUserSchema>;
+export type TwitchUser = z.infer<typeof TwitchUserSchema>;
 
 export const TwitchUsersResponseSchema = z.object({
 	data: z.array(TwitchUserSchema),
@@ -22,7 +22,7 @@ const TwitchStreamSchema = z.object({
 	title: z.string(),
 	viewer_count: z.number(),
 });
-export type TwitchStreamSchema = z.infer<typeof TwitchStreamSchema>;
+export type TwitchStream = z.infer<typeof TwitchStreamSchema>;
 
 export const TwitchStreamsResponseSchema = z.object({
 	data: z.array(TwitchStreamSchema),
@@ -34,8 +34,10 @@ export const TwitchTokenResponseSchema = z.object({
 	expires_in: z.number(),
 });
 
-export const TwitchTokenJsonSchema = z.object({
+export const TwitchTokenSchema = z.object({
 	token: z.string(),
 	expiresIn: z.number(),
 	lastUpdatedAt: z.number(),
 });
+
+export type TwitchToken = z.infer<typeof TwitchTokenSchema>;
