@@ -1,14 +1,8 @@
 import z from 'zod';
 
 export const ConfigSchema = z.object({
-	twitch: z.object({
-		clientId: z.string(),
-		clientSecret: z.string(),
-	}),
-	database: z.object({
-		url: z.string(),
-	}),
-	telegram: z.object({
-		botToken: z.string(),
-	}),
+	twitchClientId: z.string(),
+	twitchClientSecret: z.string(),
+	databaseUrl: z.string(),
+	telegramBotToken: z.string(),
 });

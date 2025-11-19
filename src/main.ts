@@ -8,13 +8,17 @@ import { TelegramBotController } from './services/TelegramBotController.ts';
 import type { TwitchStream } from './Twitch/Schema.ts';
 import { TwitchSevice } from './Twitch/Service.ts';
 
-const telegramBot = new TelegramBot(config.telegram.botToken, {
+const telegramBot = new TelegramBot(config.telegramBotToken, {
 	polling: true,
 });
-const database = new Database(config.database.url);
+const database = new Database(config.databaseUrl);
 const subsRepo = new SubscriptionRepository(database);
 const twitchService = new TwitchSevice({
-	config: { ...config.twitch, saveTokenToFile: 'twitchTokens.local.json' },
+	config: {
+		clientId: config.twitchClientId,
+		clientSecret: config.twitchClientSecret,
+		saveTokenToFile: 'twitchTokens.local.json',
+	},
 	logger,
 });
 
