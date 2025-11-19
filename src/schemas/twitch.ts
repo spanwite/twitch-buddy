@@ -36,5 +36,6 @@ export const TwitchTokenResponseSchema = z.object({
 
 export const TwitchTokenJsonSchema = z.object({
 	token: z.string(),
-	expiresAt: z.number(),
+	expiresIn: z.number(),
+	lastUpdatedAt: z.number(),
 });

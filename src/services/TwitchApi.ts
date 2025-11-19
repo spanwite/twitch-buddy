@@ -10,11 +10,16 @@ import type { Logger } from '../types.ts';
 import { chunk, list } from '../utils/array.ts';
 import { HttpRequestError } from '../utils/error.ts';
 
+interface TokenData {
+	token: string;
+	expiresIn: number;
+	lastUpdatedAt: number;
+}
+
 export class TwitchApi {
-	protected readonly baseUrl = 'https://api.twitch.tv/helix';
-	protected appAccessToken = '';
-	protected appAccessTokenExpiresAt = 0;
 	protected readonly logger: Logger;
+	static readonly baseUrl = 'https://api.twitch.tv/helix';
+	protected tokenData: TokenData | null = null;
 
 	constructor(
 		protected readonly config: {
@@ -31,21 +36,25 @@ export class TwitchApi {
 		ids?: string[] | string;
 		logins?: string[] | string;
 	}): Promise<TwitchUserSchema[]> {
-		const idItems = list(query?.ids ?? []).map((id) => `id=${id}`);
-		const loginItems = list(query?.logins ?? []).map((login) => `login=${login}`);
-		const queryItems = ([] as Array<string>).concat(idItems, loginItems);
+		const idQueries = list(query?.ids ?? []).map((id) => `id=${id}`);
+		const loginQueries = list(query?.logins ?? []).map((login) => `login=${login}`);
+		const queries = ([] as Array<string>).concat(idQueries, loginQueries);
 
-		if (queryItems.length === 0) return [];
-		await this.updateAppAccessTokenIfExpired();
+		if (queries.length === 0) {
+			return [];
+		}
+		if (this.isTokenExpired()) {
+			await this.renewToken();
+		}
 
-		const chunks = chunk(queryItems, 100);
+		const chunks = chunk(queries, 100);
 		const results: TwitchUserSchema[] = [];
 
 		for (const chunk of chunks) {
 			const query = chunk.join('&');
-			const response = await fetch(`${this.baseUrl}/users?${query}`, {
+			const response = await fetch(`${TwitchApi.baseUrl}/users?${query}`, {
 				method: 'GET',
-				headers: this.headers,
+				headers: this.getRequestHeaders(),
 			});
 			const responseBody = await response.json();
 			if (!response.ok) {
@@ -67,17 +76,21 @@ export class TwitchApi {
 		const userLoginItems = list(query?.userLogins ?? []).map((login) => `user_login=${login}`);
 		const queryItems = ([] as Array<string>).concat(userIdItems, userLoginItems);
 
-		if (queryItems.length === 0) return [];
-		await this.updateAppAccessTokenIfExpired();
+		if (queryItems.length === 0) {
+			return [];
+		}
+		if (this.isTokenExpired()) {
+			await this.renewToken();
+		}
 
 		const chunks = chunk(queryItems, 100);
 		const results: TwitchStreamSchema[] = [];
 
 		for (const chunk of chunks) {
 			const query = chunk.join('&');
-			const response = await fetch(`${this.baseUrl}/streams?${query}`, {
+			const response = await fetch(`${TwitchApi.baseUrl}/streams?${query}`, {
 				method: 'GET',
-				headers: this.headers,
+				headers: this.getRequestHeaders(),
 			});
 			const responseBody = await response.json();
 			if (!response.ok) {
@@ -91,52 +104,56 @@ export class TwitchApi {
 		return results;
 	}
 
-	protected async updateAppAccessTokenIfExpired() {
+	protected isTokenExpired(): boolean {
+		return this.tokenData === null || Date.now() >= this.calculateTokenExpiresAt();
+	}
+
+	protected calculateTokenExpiresAt(): number {
+		if (this.tokenData === null) {
+			throw new Error('Token data is not available');
+		}
+		return this.tokenData.lastUpdatedAt + this.tokenData.expiresIn * 1000;
+	}
+
+	protected async renewToken(): Promise<void> {
+		if (this.tokenData === null) {
+			return this.loadTokenFromFile();
+		}
+		const tokenResponse = await this.fetchToken();
+		this.tokenData = {
+			token: tokenResponse.access_token,
+			expiresIn: tokenResponse.expires_in,
+			lastUpdatedAt: Date.now(),
+		};
+		const expireLabel = new Date(this.calculateTokenExpiresAt()).toISOString();
+
+		this.logger.info(`appAccessToken renewed. it will expire at ${expireLabel}`);
+
+		await this.saveTokenToFile();
+	}
+
+	protected async loadTokenFromFile() {
 		const { tokenFile } = this.config;
-		if (!this.appAccessToken && tokenFile) {
+		if (tokenFile) {
 			const tokenData = await Bun.file(tokenFile).json();
 			const { data, success } = TwitchTokenJsonSchema.safeParse(tokenData);
 			if (success) {
-				this.appAccessToken = data.token;
-				this.appAccessTokenExpiresAt = data.expiresAt;
+				this.tokenData = data;
 				this.logger.info(`appAccessToken loaded from a file`);
 			}
-			this.logger.info(
-				`appAccessToken will expire at ${new Date(this.appAccessTokenExpiresAt).toISOString()}`,
-			);
-		}
-		if (Date.now() >= this.appAccessTokenExpiresAt) {
-			this.logger.info('appAccessToken is expired');
-			await this.updateAppAccessToken();
 		}
 	}
 
-	protected async updateAppAccessToken() {
-		const { access_token, expires_in } = await this.fetchAppAccessToken();
+	protected async saveTokenToFile(): Promise<void> {
 		const { tokenFile } = this.config;
-
-		this.appAccessToken = access_token;
-		this.appAccessTokenExpiresAt = Date.now() + expires_in * 1000;
-		this.logger.info('appAccessToken updated from server');
-
-		this.logger.info(
-			`appAccessToken will expire at ${new Date(this.appAccessTokenExpiresAt).toISOString()}`,
-		);
-
-		if (tokenFile) {
-			await Bun.write(
-				tokenFile,
-				JSON.stringify({
-					token: access_token,
-					expiresAt: this.appAccessTokenExpiresAt,
-				}),
-			);
+		if (tokenFile && this.tokenData) {
+			await Bun.write(tokenFile, JSON.stringify(this.tokenData));
 			this.logger.info(`appAccessToken saved to a file ${tokenFile}`);
 		}
 	}
 
-	protected async fetchAppAccessToken() {
-		const { clientId, clientSecret } = this.config;
+	protected async fetchToken() {
+		const { clientSecret, clientId } = this.config;
 		const response = await fetch('https://id.twitch.tv/oauth2/token', {
 			method: 'POST',
 			headers: {
@@ -155,10 +172,10 @@ export class TwitchApi {
 		return TwitchTokenResponseSchema.parse(responseBody);
 	}
 
-	protected get headers() {
+	protected getRequestHeaders() {
 		return {
 			'Client-Id': this.config.clientId,
-			Authorization: `Bearer ${this.appAccessToken}`,
+			Authorization: `Bearer ${this.tokenData?.token}`,
 			'Content-Type': 'application/json',
 		};
 	}
