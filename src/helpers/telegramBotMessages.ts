@@ -1,6 +1,6 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import type { TwitchStream } from '../Twitch/Schema.ts';
-import { generateTwitchUserUrl } from '../Twitch/Utils.ts';
+import { generateTwitchUserUrl, markdownLink } from '../utils/string.ts';
 
 type ReturnMessage = [string, TelegramBot.SendMessageOptions];
 
@@ -41,8 +41,4 @@ export function streamEnded(stream: TwitchStream): ReturnMessage {
 	};
 
 	return [messageText, messageOptions];
-}
-
-export function markdownLink(text: string, url: string): string {
-	return `[${text}](${url})`;
 }
