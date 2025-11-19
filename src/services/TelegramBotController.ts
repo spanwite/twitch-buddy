@@ -1,6 +1,6 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { Logger } from '../types.ts';
 import type { TwitchSevice } from '../Twitch/Service.ts';
+import type { AppLogger } from '../types.ts';
 import type { SubscriptionRepository } from './SubscriptionRepository.ts';
 
 enum TelegramBotAction {
@@ -10,14 +10,14 @@ enum TelegramBotAction {
 export class TelegramBotController {
 	protected readonly bot: TelegramBot;
 	protected readonly subsRepo: SubscriptionRepository;
-	protected readonly logger: Logger;
 	protected readonly twitchService: TwitchSevice;
+	protected readonly logger: AppLogger;
 
 	constructor(deps: {
 		telegramBot: TelegramBot;
 		subsRepo: SubscriptionRepository;
-		logger: Logger;
 		twitchService: TwitchSevice;
+		logger: AppLogger;
 	}) {
 		this.bot = deps.telegramBot;
 		this.subsRepo = deps.subsRepo;
