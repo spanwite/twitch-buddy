@@ -1,0 +1,59 @@
+import type TelegramBot from 'node-telegram-bot-api';
+import type { AppContainer } from '../container.ts';
+import type { SubscriptionRepository } from '../Subscription/Repository.ts';
+import type { TwitchService } from '../Twitch/Service.ts';
+import type { AppLogger } from '../types.ts';
+import { type TelegramBotAction, TelegramBotActionVariant } from './types.ts';
+
+type Container = Pick<
+	AppContainer,
+	'telegramBot' | 'subscriptionRepository' | 'twitchService' | 'logger'
+>;
+
+export class ActionRemoveStreamer implements TelegramBotAction {
+	readonly variant = TelegramBotActionVariant.RemoveStreamerWithId;
+
+	protected readonly bot: TelegramBot;
+	protected readonly subscriptionRepository: SubscriptionRepository;
+	protected readonly twitchService: TwitchService;
+	protected readonly logger: AppLogger;
+
+	constructor(container: Container) {
+		this.bot = container.telegramBot;
+		this.subscriptionRepository = container.subscriptionRepository;
+		this.twitchService = container.twitchService;
+		this.logger = container.logger;
+	}
+
+	handle(query: TelegramBot.CallbackQuery) {
+		const { data, message } = query;
+		if (!data || !message) {
+			return;
+		}
+		const {
+			message_id: messageId,
+			chat: { id: chatId },
+		} = message;
+		const [, streamerId] = data.split('=');
+
+		this.subscriptionRepository.delete({
+			where: { userId: chatId.toString(), streamerId },
+		});
+		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerId}`);
+
+		const streamerButtons = message.reply_markup?.inline_keyboard?.[0] ?? [];
+		const newStreamerButtons = streamerButtons.filter(
+			({ callback_data }) => callback_data?.split('=')[1] !== streamerId,
+		);
+		if (newStreamerButtons.length === 0) {
+			this.bot.editMessageText(
+				`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
+				{ message_id: messageId, chat_id: chatId, parse_mode: 'Markdown' },
+			);
+		}
+		this.bot.editMessageReplyMarkup(
+			{ inline_keyboard: [newStreamerButtons] },
+			{ message_id: messageId, chat_id: chatId },
+		);
+	}
+}

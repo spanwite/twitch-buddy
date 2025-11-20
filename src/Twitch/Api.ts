@@ -6,7 +6,7 @@ import {
 	TwitchTokenResponseSchema,
 	type TwitchUser,
 	TwitchUsersResponseSchema,
-} from './Schema.ts';
+} from './Schemas.ts';
 
 const TWITCH_API_BASE_URL = 'https://api.twitch.tv/helix';
 

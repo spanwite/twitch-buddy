@@ -5,7 +5,7 @@ import {
 	type TwitchToken,
 	TwitchTokenSchema,
 	type TwitchUser,
-} from './Schema.ts';
+} from './Schemas.ts';
 
 interface TwitchConfig {
 	clientId: string;
@@ -13,7 +13,7 @@ interface TwitchConfig {
 	saveTokenToFile?: string;
 }
 
-export class TwitchSevice {
+export class TwitchService {
 	static readonly baseUrl = 'https://api.twitch.tv/helix';
 
 	protected readonly config: TwitchConfig;
@@ -21,12 +21,12 @@ export class TwitchSevice {
 
 	protected token: TwitchToken | null = null;
 
-	constructor({ logger, config }: { logger: AppLogger; config: TwitchConfig }) {
-		this.logger = logger;
-		this.config = config;
+	constructor(container: { logger: AppLogger; twitchConfig: TwitchConfig }) {
+		this.logger = container.logger;
+		this.config = container.twitchConfig;
 	}
 
-	public async fetchOneUserByLogin(userLogin: string): Promise<TwitchUser | null> {
+	async fetchUserByLogin(userLogin: string): Promise<TwitchUser | null> {
 		const { clientId } = this.config;
 		const token = await this.getValidToken();
 		const users = await fetchUsers({
@@ -37,7 +37,7 @@ export class TwitchSevice {
 		return users[0] ?? null;
 	}
 
-	public async fetchManyStreamsByUserIds(userIds: string[]): Promise<TwitchStream[]> {
+	async fetchStreamsByUserIds(userIds: string[]): Promise<TwitchStream[]> {
 		const { clientId } = this.config;
 		const token = await this.getValidToken();
 		return fetchStreams({
@@ -54,7 +54,7 @@ export class TwitchSevice {
 			const token = await readTokenFromFile(tokenFilePath);
 			if (token) {
 				this.token = token;
-				this.logger.info(`appAccessToken loaded from a file ${tokenFilePath}`);
+				this.logger.info(`appAccessToken loaded from file ${tokenFilePath}`);
 			} else {
 				this.logger.info(`failed to load appAccessToken from file ${tokenFilePath}`);
 			}
