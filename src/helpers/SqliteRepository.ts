@@ -111,7 +111,6 @@ export class SqliteRepository<Entity extends Record<string, any>> {
 		const selectSchema = select ? Object.keys(select).join(', ') : '*';
 
 		const query = `SELECT ${selectSchema} FROM ${this.tableName} ${whereQuery}`;
-		console.log(query);
 
 		return this.database.query<Return, SQLQueryBindings[]>(query).get(...whereParams);
 	}
@@ -187,6 +186,9 @@ export function generateWhereClause(
 			params.push(value);
 			conditions.push(`${key} = ?`);
 		}
+	}
+	if (conditions.length === 0) {
+		return ['', []];
 	}
 	return [`WHERE ${conditions.join(' AND ')}`, params];
 }
