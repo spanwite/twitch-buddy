@@ -5,7 +5,7 @@ import type { TwitchStream } from './Twitch/Schemas.ts';
 import type { TwitchService } from './Twitch/Service.ts';
 import type { AppLogger } from './types.ts';
 import { list } from './utils/array.ts';
-import { generateTwitchUserUrl, markdownLink } from './utils/string.ts';
+import { escapeMarkdownV2, generateTwitchUserUrl, markdownLink } from './utils/string.ts';
 
 export class StreamAlerts {
 	protected lastOnlineStreams: TwitchStream[] = [];
@@ -34,10 +34,14 @@ export class StreamAlerts {
 	}
 
 	async loop(): Promise<void> {
-		const { onlineStreams, offlineStreams } = await this.checkStreamsFromDb();
+		try {
+			const { onlineStreams, offlineStreams } = await this.checkStreamsFromDb();
 
-		this.notifyAboutStartedStreams(onlineStreams);
-		this.notifyAboutEndedStreams(offlineStreams);
+			await this.notifyAboutStartedStreams(onlineStreams);
+			await this.notifyAboutEndedStreams(offlineStreams);
+		} catch (error) {
+			this.logger.error('stream alerts loop failed', error);
+		}
 	}
 
 	protected async checkStreamsFromDb(): Promise<{
@@ -79,7 +83,15 @@ export class StreamAlerts {
 			const streamStartedMessage = makeStreamStartedMessage(stream);
 
 			for (const { userId } of usersToNotify) {
-				await this.telegramBot.sendMessage(userId, ...streamStartedMessage);
+				try {
+					await this.telegramBot.sendMessage(userId, ...streamStartedMessage);
+				} catch (error) {
+					this.logger.error(
+						`failed to send stream start notification to user ${userId}`,
+						error,
+					);
+					continue;
+				}
 				this.subscriptionRepository.updateMany({
 					data: { lastNotifiedStreamId: stream.id },
 					where: {
@@ -105,7 +117,15 @@ export class StreamAlerts {
 			const streamEndedMessage = makeStreamEndedMessage(stream);
 
 			for (const { userId } of usersToNotify) {
-				this.telegramBot.sendMessage(userId, ...streamEndedMessage);
+				try {
+					await this.telegramBot.sendMessage(userId, ...streamEndedMessage);
+				} catch (err) {
+					this.logger.error(
+						`failed to send stream end notification to user ${userId}`,
+						err as any,
+					);
+					continue;
+				}
 				this.subscriptionRepository.update({
 					data: { lastNotifiedStreamId: '' },
 					where: { userId, lastNotifiedStreamId: stream.id },
@@ -120,18 +140,19 @@ export class StreamAlerts {
 
 export function makeStreamStartedMessage(stream: TwitchStream): TelegramBotMessage {
 	const { title, game_name, started_at, user_login, viewer_count } = stream;
+
 	const streamerUrl = generateTwitchUserUrl(user_login);
-	const streamerText = markdownLink(user_login, streamerUrl);
+	const streamerText = markdownLink(escapeMarkdownV2(user_login), escapeMarkdownV2(streamerUrl));
 
 	const messageText = [
-		`🔴 ${streamerText} — в эфире!`,
-		`🗂 Категория: ${game_name}`,
-		`📝 Название стрима: ${title}`,
-		`🕒 Онлайн с: ${started_at}`,
+		`🔴 ${streamerText} — в эфире\\!`,
+		`🗂 Категория: ${escapeMarkdownV2(game_name)}`,
+		`📝 Название стрима: ${escapeMarkdownV2(title)}`,
+		`🕒 Онлайн с: ${escapeMarkdownV2(started_at)}`,
 		`👀 Сейчас смотрят: ${viewer_count} зрителей`,
 	].join('\n');
 	const messageOptions: TelegramBot.SendMessageOptions = {
-		parse_mode: 'Markdown',
+		parse_mode: 'MarkdownV2',
 		disable_web_page_preview: true,
 		reply_markup: {
 			inline_keyboard: [[{ text: '🚀 Залететь на стрим', url: streamerUrl }]],
@@ -144,13 +165,14 @@ export function makeStreamStartedMessage(stream: TwitchStream): TelegramBotMessa
 export function makeStreamEndedMessage(stream: TwitchStream): TelegramBotMessage {
 	const { title, user_login } = stream;
 	const streamerUrl = generateTwitchUserUrl(user_login);
-	const streamerText = markdownLink(user_login, streamerUrl);
+	const streamerText = markdownLink(escapeMarkdownV2(user_login), escapeMarkdownV2(streamerUrl));
 
-	const messageText = [`⚫ ${streamerText} завершил(а) стрим`, `📝 Название было: ${title}`].join(
-		'\n',
-	);
+	const messageText = [
+		`⚫ ${streamerText} завершил\\(а\\) стрим`,
+		`📝 Название было: ${escapeMarkdownV2(title)}`,
+	].join('\n');
 	const messageOptions: TelegramBot.SendMessageOptions = {
-		parse_mode: 'Markdown',
+		parse_mode: 'MarkdownV2',
 		disable_web_page_preview: true,
 	};
 

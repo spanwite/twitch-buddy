@@ -38,7 +38,11 @@ export class TelegramBotController {
 		const botCommands: TelegramBot.BotCommand[] = [];
 		for (const command of this.commands) {
 			const { name, description, regexp, handle } = command;
-			this.bot.onText(regexp, handle.bind(command));
+			this.bot.onText(regexp, (message) => {
+				handle.call(command, message).catch((error) => {
+					this.logger.error(`bot command ${name} failed`, error);
+				});
+			});
 			botCommands.push({
 				command: name,
 				description: description,
@@ -62,7 +66,10 @@ export class TelegramBotController {
 		const [variant] = query.data.split('=');
 		for (const action of this.actions) {
 			if (action.variant === variant) {
-				return void action.handle.call(action, query);
+				action.handle.call(action, query).catch((error) => {
+					this.logger.error(`bot action ${action.variant} failed`, error);
+				});
+				return;
 			}
 		}
 	}

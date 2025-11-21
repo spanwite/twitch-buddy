@@ -12,8 +12,8 @@ export class CommandStart implements TelegramBotCommand {
 		this.bot = container.telegramBot;
 	}
 
-	handle(message: TelegramBot.Message) {
-		this.bot.sendMessage(message.chat.id, ...makeGreetMessage());
+	async handle(message: TelegramBot.Message) {
+		await this.bot.sendMessage(message.chat.id, ...makeGreetMessage());
 	}
 }
 

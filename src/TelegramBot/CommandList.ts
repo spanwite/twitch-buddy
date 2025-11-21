@@ -1,5 +1,4 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { AppContainer } from '../container.ts';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
@@ -37,7 +36,8 @@ export class CommandList implements TelegramBotCommand {
 			where: { userId: chatId.toString() },
 		});
 		if (userSubs.length === 0) {
-			return void this.bot.sendMessage(chatId, ...makeEmptyListMessage());
+			await this.bot.sendMessage(chatId, ...makeEmptyListMessage());
+			return;
 		}
 		const streamersButtons: TelegramBot.InlineKeyboardButton[] = userSubs.map(
 			({ streamerLogin, streamerId }) => ({
@@ -45,7 +45,7 @@ export class CommandList implements TelegramBotCommand {
 				callback_data: `${TelegramBotActionVariant.RemoveStreamerWithId}=${streamerId}`,
 			}),
 		);
-		this.bot.sendMessage(chatId, ...makeStreamersListMessage(streamersButtons));
+		await this.bot.sendMessage(chatId, ...makeStreamersListMessage(streamersButtons));
 	}
 }
 

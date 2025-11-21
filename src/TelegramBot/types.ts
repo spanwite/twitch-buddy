@@ -9,13 +9,13 @@ export interface TelegramBotCommand {
 	name: string;
 	description: string;
 
-	handle(message: TelegramBot.Message): void;
+	handle(message: TelegramBot.Message): Promise<void>;
 }
 
 export interface TelegramBotAction {
 	variant: TelegramBotActionVariant;
 
-	handle(query: TelegramBot.CallbackQuery): void;
+	handle(query: TelegramBot.CallbackQuery): Promise<void>;
 }
 
 export type TelegramBotMessage = [string, TelegramBot.SendMessageOptions];

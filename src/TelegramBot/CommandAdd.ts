@@ -1,8 +1,10 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
+import type { TwitchUser } from '../Twitch/Schemas.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
-import { generateTwitchUserUrl } from '../utils/string.ts';
+import { HttpRequestError } from '../utils/error.ts';
+import { escapeMarkdownV2, generateTwitchUserUrl, markdownLink } from '../utils/string.ts';
 import type { TelegramBotCommand, TelegramBotMessage } from './types.ts';
 
 export class CommandAdd implements TelegramBotCommand {
@@ -29,23 +31,34 @@ export class CommandAdd implements TelegramBotCommand {
 
 	async handle(message: TelegramBot.Message) {
 		if (!message.text) {
+			this.logger.warn('received /add command with empty message text');
 			return;
 		}
 		const chatId = message.chat.id;
 		const match = /\/add (.+)/.exec(message.text);
 		if (!match?.[1]) {
-			return void this.bot.sendMessage(chatId, ...makeInvalidFormatMessage());
+			await this.bot.sendMessage(chatId, ...makeInvalidFormatMessage());
+			return;
 		}
 		const streamerLogin = match[1].toLowerCase().trim();
-		const fetchedStreamer = await this.twitchService.fetchUserByLogin(streamerLogin);
-		if (!fetchedStreamer) {
-			return void this.bot.sendMessage(chatId, ...makeNotFoundMessage(streamerLogin));
+		let fetchedStreamer: TwitchUser | null = null;
+		try {
+			fetchedStreamer = await this.twitchService.fetchUserByLogin(streamerLogin);
+		} catch (error) {
+			if (!(error instanceof HttpRequestError) || error.statusCode !== 400) {
+				throw error;
+			}
+		}
+		if (fetchedStreamer === null) {
+			await this.bot.sendMessage(chatId, ...makeNotFoundMessage(streamerLogin));
+			return;
 		}
 		const foundSub = this.subsRepo.findFirst({
 			where: { userId: chatId.toString(), streamerId: fetchedStreamer.id },
 		});
 		if (foundSub) {
-			return void this.bot.sendMessage(chatId, ...makeAlreadyAddedMessage(streamerLogin));
+			await this.bot.sendMessage(chatId, ...makeAlreadyAddedMessage(streamerLogin));
+			return;
 		}
 		this.subsRepo.create({
 			data: {
@@ -69,23 +82,24 @@ function makeInvalidFormatMessage(): TelegramBotMessage {
 
 function makeNotFoundMessage(username: string): TelegramBotMessage {
 	return [
-		`Я обшарил Twitch вдоль и поперёк...\nНо ${username} там не нашел 👻 Проверь никнейм!`,
-		{ parse_mode: 'Markdown', disable_web_page_preview: true },
+		`Я обшарил Twitch вдоль и поперёк…\nНо \`${escapeMarkdownV2(username)}\` там не нашел 👻 Проверь никнейм\\!`,
+		{ parse_mode: 'MarkdownV2', disable_web_page_preview: true },
 	];
 }
 
 function makeAlreadyAddedMessage(username: string): TelegramBotMessage {
-	const streamerUrl = generateTwitchUserUrl(username);
+	const streamerUrl = escapeMarkdownV2(generateTwitchUserUrl(username));
+	const streamer = markdownLink(escapeMarkdownV2(username), streamerUrl);
 	return [
-		`${streamerUrl} уже добавлен 🎮\nУведомлю, как только выйдет в онлайн 🌐`,
-		{ parse_mode: 'Markdown', disable_web_page_preview: true },
+		`${streamer} уже добавлен 🎮\nУведомлю, как только выйдет в онлайн 🌐`,
+		{ parse_mode: 'MarkdownV2', disable_web_page_preview: true },
 	];
 }
 
 function makeAddedMessage(username: string): TelegramBotMessage {
-	const streamer = generateTwitchUserUrl(username);
+	const streamerUrl = generateTwitchUserUrl(username);
 	return [
-		`🎉 Всё чётко! ${streamer} теперь под наблюдением 👀\nДам знать, как только начнётся стрим 🎥`,
+		`🎉 Всё чётко! ${markdownLink(username, streamerUrl)} теперь под наблюдением 👀\nДам знать, как только начнётся стрим 🎥`,
 		{ parse_mode: 'Markdown', disable_web_page_preview: true },
 	];
 }

@@ -2,6 +2,7 @@ import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
+import { escapeMarkdownV2 } from '../utils/string.ts';
 import type { TelegramBotCommand, TelegramBotMessage } from './types.ts';
 
 export class CommandRemove implements TelegramBotCommand {
@@ -30,16 +31,18 @@ export class CommandRemove implements TelegramBotCommand {
 		const chatId = message.chat.id;
 		const match = /\/remove (.+)/.exec(message.text || '');
 		if (!match?.[1]) {
-			return void this.bot.sendMessage(chatId, ...makeInvalidFormatMessage());
+			await this.bot.sendMessage(chatId, ...makeInvalidFormatMessage());
+			return;
 		}
 		const streamerLogin = match[1].trim().toLowerCase();
 		const deleteSub = this.subscriptionRepository.delete({
 			where: { userId: chatId.toString(), streamerLogin },
 		});
 		if (deleteSub === null) {
-			return void this.bot.sendMessage(chatId, ...makeNotAddedMessage(streamerLogin));
+			await this.bot.sendMessage(chatId, ...makeNotAddedMessage(streamerLogin));
+			return;
 		}
-		this.bot.sendMessage(chatId, ...makeRemovedMessage(streamerLogin));
+		await this.bot.sendMessage(chatId, ...makeRemovedMessage(streamerLogin));
 		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerLogin}`);
 	}
 }
@@ -52,15 +55,17 @@ function makeInvalidFormatMessage(): TelegramBotMessage {
 }
 
 function makeRemovedMessage(username: string): TelegramBotMessage {
+	const streamer = `\`${escapeMarkdownV2(username)}\``;
 	return [
-		`🗑 ${username} — отправлен в архив!\nУведомления? Какие уведомления? 😏`,
-		{ parse_mode: 'Markdown', disable_web_page_preview: true },
+		`🗑 ${streamer} — отправлен в архив\\!\nУведомления? Какие уведомления? 😏`,
+		{ parse_mode: 'MarkdownV2', disable_web_page_preview: true },
 	];
 }
 
 export function makeNotAddedMessage(username: string): TelegramBotMessage {
+	const streamer = `\`${escapeMarkdownV2(username)}\``;
 	return [
-		`🤷 А я вообще не следил за ${username}\nДобавь сначала, если хочешь, чтобы я присматривал 👀`,
-		{ parse_mode: 'Markdown', disable_web_page_preview: true },
+		`🤷 А я вообще не следил за ${streamer}\nДобавь сначала, если хочешь, чтобы я присматривал 👀`,
+		{ parse_mode: 'MarkdownV2', disable_web_page_preview: true },
 	];
 }

@@ -1,14 +1,8 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { AppContainer } from '../container.ts';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
 import { type TelegramBotAction, TelegramBotActionVariant } from './types.ts';
-
-type Container = Pick<
-	AppContainer,
-	'telegramBot' | 'subscriptionRepository' | 'twitchService' | 'logger'
->;
 
 export class ActionRemoveStreamer implements TelegramBotAction {
 	readonly variant = TelegramBotActionVariant.RemoveStreamerWithId;
@@ -18,16 +12,24 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 	protected readonly twitchService: TwitchService;
 	protected readonly logger: AppLogger;
 
-	constructor(container: Container) {
+	constructor(container: {
+		telegramBot: TelegramBot;
+		subscriptionRepository: SubscriptionRepository;
+		twitchService: TwitchService;
+		logger: AppLogger;
+	}) {
 		this.bot = container.telegramBot;
 		this.subscriptionRepository = container.subscriptionRepository;
 		this.twitchService = container.twitchService;
 		this.logger = container.logger;
 	}
 
-	handle(query: TelegramBot.CallbackQuery) {
+	async handle(query: TelegramBot.CallbackQuery) {
 		const { data, message } = query;
 		if (!data || !message) {
+			this.logger.warn(
+				'received invalid callback query in ActionRemoveStreamer: data or message is missing',
+			);
 			return;
 		}
 		const {
@@ -46,12 +48,12 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 			({ callback_data }) => callback_data?.split('=')[1] !== streamerId,
 		);
 		if (newStreamerButtons.length === 0) {
-			this.bot.editMessageText(
+			await this.bot.editMessageText(
 				`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
 				{ message_id: messageId, chat_id: chatId, parse_mode: 'Markdown' },
 			);
 		}
-		this.bot.editMessageReplyMarkup(
+		await this.bot.editMessageReplyMarkup(
 			{ inline_keyboard: [newStreamerButtons] },
 			{ message_id: messageId, chat_id: chatId },
 		);
