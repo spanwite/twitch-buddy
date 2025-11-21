@@ -27,24 +27,7 @@ export class StreamAlerts {
 		this.logger = container.logger;
 	}
 
-	async startTracking(): Promise<void> {
-		this.loop();
-
-		setInterval(this.loop.bind(this), 1000 * 60 * 1);
-	}
-
-	async loop(): Promise<void> {
-		try {
-			const { onlineStreams, offlineStreams } = await this.checkStreamsFromDb();
-
-			await this.notifyAboutStartedStreams(onlineStreams);
-			await this.notifyAboutEndedStreams(offlineStreams);
-		} catch (error) {
-			this.logger.error('stream alerts loop failed', error);
-		}
-	}
-
-	protected async checkStreamsFromDb(): Promise<{
+	async checkStreamsFromDb(): Promise<{
 		onlineStreams: TwitchStream[];
 		offlineStreams: TwitchStream[];
 	}> {
@@ -52,9 +35,6 @@ export class StreamAlerts {
 			.findMany({ distinct: 'streamerId' })
 			.map((sub) => sub.streamerId);
 		const onlineStreams = await this.twitchService.fetchStreamsByUserIds(streamerIds);
-		this.logger.info(
-			`found ${onlineStreams.length} active streams from ${streamerIds.length} streamers`,
-		);
 		const offlineStreams = this.lastOnlineStreams.filter(
 			(stream) => !onlineStreams.find((s) => s.id === stream.id),
 		);
@@ -66,9 +46,7 @@ export class StreamAlerts {
 		};
 	}
 
-	protected async notifyAboutStartedStreams(
-		streams: TwitchStream[] | TwitchStream,
-	): Promise<void> {
+	async notifyAboutStartedStreams(streams: TwitchStream[] | TwitchStream): Promise<void> {
 		streams = list(streams);
 
 		for (const stream of streams) {
@@ -119,10 +97,10 @@ export class StreamAlerts {
 			for (const { userId } of usersToNotify) {
 				try {
 					await this.telegramBot.sendMessage(userId, ...streamEndedMessage);
-				} catch (err) {
+				} catch (error) {
 					this.logger.error(
 						`failed to send stream end notification to user ${userId}`,
-						err as any,
+						error,
 					);
 					continue;
 				}

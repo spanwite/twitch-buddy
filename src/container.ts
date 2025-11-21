@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
-import { config } from './config.ts';
+import type { AppConfig } from './App.ts';
+import { config as globalConfig } from './config.ts';
 import { logger } from './logger.ts';
 import { StreamAlerts } from './StreamAlerts.ts';
 import { SubscriptionRepository } from './Subscription/Repository.ts';
@@ -13,14 +14,14 @@ import { TelegramBotController } from './TelegramBot/Controller.ts';
 import type { TelegramBotAction, TelegramBotCommand } from './TelegramBot/types.ts';
 import { TwitchService } from './Twitch/Service.ts';
 
-const telegramBot = new TelegramBot(config.telegramBotToken, {
+const telegramBot = new TelegramBot(globalConfig.telegramBotToken, {
 	polling: true,
 });
-const database = new Database(config.databaseUrl);
+const database = new Database(globalConfig.databaseUrl);
 const subscriptionRepository = new SubscriptionRepository(database);
 const twitchConfig = {
-	clientId: config.twitchClientId,
-	clientSecret: config.twitchClientSecret,
+	clientId: globalConfig.twitchClientId,
+	clientSecret: globalConfig.twitchClientSecret,
 	saveTokenToFile: 'twitchTokens.local.json',
 };
 const twitchService = new TwitchService({
@@ -68,6 +69,9 @@ const streamAlerts = new StreamAlerts({
 	logger,
 	twitchService,
 });
+const config: AppConfig = {
+	streamAlertsInterval: globalConfig.streamAlertsInterval,
+};
 
 export const container = {
 	telegramBot,
@@ -77,6 +81,7 @@ export const container = {
 	telegramBotController,
 	logger,
 	streamAlerts,
+	config,
 };
 
 export type AppContainer = typeof container;
