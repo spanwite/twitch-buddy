@@ -2,6 +2,8 @@ import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
+import { chunk } from '../utils/array.ts';
+import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
 import {
 	TelegramBotActionVariant,
 	type TelegramBotCommand,
@@ -61,7 +63,7 @@ function makeStreamersListMessage(buttons: TelegramBot.InlineKeyboardButton[]): 
 		`❌ Хочешь перестать следить за кем-то?\nТкни по нику — и он пропадёт из списка 👇`,
 		{
 			reply_markup: {
-				inline_keyboard: [buttons],
+				inline_keyboard: chunk(buttons, STREAMER_BUTTONS_PER_ROW),
 				one_time_keyboard: true,
 			},
 		},

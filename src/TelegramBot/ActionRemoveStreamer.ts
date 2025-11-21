@@ -2,6 +2,8 @@ import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
+import { chunk } from '../utils/array.ts';
+import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
 import { type TelegramBotAction, TelegramBotActionVariant } from './types.ts';
 
 export class ActionRemoveStreamer implements TelegramBotAction {
@@ -54,7 +56,9 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 			);
 		}
 		await this.bot.editMessageReplyMarkup(
-			{ inline_keyboard: [newStreamerButtons] },
+			{
+				inline_keyboard: chunk(newStreamerButtons, STREAMER_BUTTONS_PER_ROW),
+			},
 			{ message_id: messageId, chat_id: chatId },
 		);
 	}
