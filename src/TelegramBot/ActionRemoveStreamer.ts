@@ -45,21 +45,30 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 		});
 		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerId}`);
 
-		const streamerButtons = message.reply_markup?.inline_keyboard?.[0] ?? [];
-		const newStreamerButtons = streamerButtons.filter(
-			({ callback_data }) => callback_data?.split('=')[1] !== streamerId,
-		);
-		if (newStreamerButtons.length === 0) {
+		const streamerButtons = message.reply_markup?.inline_keyboard;
+		if (!streamerButtons) {
+			this.logger.warn(
+				'received message without inline keyboard in ActionRemoveStreamer',
+				message,
+			);
+			return;
+		}
+		const filteredButtons = streamerButtons
+			.flat()
+			.filter(({ callback_data }) => callback_data?.split('=')[1] !== streamerId);
+
+		if (filteredButtons.length === 0) {
 			await this.bot.editMessageText(
 				`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
 				{ message_id: messageId, chat_id: chatId, parse_mode: 'Markdown' },
 			);
+		} else {
+			await this.bot.editMessageReplyMarkup(
+				{
+					inline_keyboard: chunk(filteredButtons, STREAMER_BUTTONS_PER_ROW),
+				},
+				{ message_id: messageId, chat_id: chatId },
+			);
 		}
-		await this.bot.editMessageReplyMarkup(
-			{
-				inline_keyboard: chunk(newStreamerButtons, STREAMER_BUTTONS_PER_ROW),
-			},
-			{ message_id: messageId, chat_id: chatId },
-		);
 	}
 }
