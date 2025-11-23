@@ -5,7 +5,12 @@ import type { TwitchStream } from './Twitch/Schemas.ts';
 import type { TwitchService } from './Twitch/Service.ts';
 import type { AppLogger } from './types.ts';
 import { list } from './utils/array.ts';
-import { escapeMarkdownV2, generateTwitchUserUrl, markdownLink } from './utils/string.ts';
+import {
+	escapeMarkdownV2,
+	formatDate,
+	generateTwitchUserUrl,
+	markdownLink,
+} from './utils/string.ts';
 
 export class StreamAlerts {
 	protected lastOnlineStreams: TwitchStream[] = [];
@@ -121,12 +126,13 @@ export function makeStreamStartedMessage(stream: TwitchStream): TelegramBotMessa
 
 	const streamerUrl = generateTwitchUserUrl(user_login);
 	const streamerText = markdownLink(escapeMarkdownV2(user_login), escapeMarkdownV2(streamerUrl));
+	const streamStarted = escapeMarkdownV2(formatDate(started_at, 'hh:mm, dd.MM.yyyy'));
 
 	const messageText = [
 		`🔴 ${streamerText} — в эфире\\!`,
 		`🗂 Категория: ${escapeMarkdownV2(game_name)}`,
 		`📝 Название стрима: ${escapeMarkdownV2(title)}`,
-		`🕒 Онлайн с: ${escapeMarkdownV2(started_at)}`,
+		`🕒 Онлайн с: ${streamStarted}`,
 		`👀 Сейчас смотрят: ${viewer_count} зрителей`,
 	].join('\n');
 	const messageOptions: TelegramBot.SendMessageOptions = {
