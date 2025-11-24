@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
 import { StreamNotifier } from './Application/StreamNotifier.ts';
 import { StreamTracker } from './Application/StreamTracker.ts';
-import { config as globalConfig } from './config.ts';
+import { config } from './config.ts';
 import { logger } from './logger.ts';
 import { SubscriptionRepository } from './Subscription/Repository.ts';
 import { ActionRemoveStreamer } from './TelegramBot/ActionRemoveStreamer.ts';
@@ -15,26 +15,18 @@ import type { TelegramBotAction, TelegramBotCommand } from './TelegramBot/types.
 import { TwitchService } from './Twitch/Service.ts';
 import { TwitchTokenManager } from './Twitch/TokenManager.ts';
 
-const telegramBot = new TelegramBot(globalConfig.telegramBotToken, {
+const telegramBot = new TelegramBot(config.telegramBotToken, {
 	polling: true,
 });
-const database = new Database(globalConfig.databaseUrl);
+const database = new Database(config.databaseUrl);
 const subscriptionRepository = new SubscriptionRepository(database);
-const twitchConfig = {
-	clientId: globalConfig.twitchClientId,
-	clientSecret: globalConfig.twitchClientSecret,
-};
 const twitchTokenManager = new TwitchTokenManager({
-	config: {
-		twitchClientId: twitchConfig.clientId,
-		twitchClientSecret: twitchConfig.clientSecret,
-		twitchTokenFilePath: 'twitchTokens.local.json',
-	},
+	config,
 	logger,
 });
-twitchTokenManager.loadTokenFromFile();
+await twitchTokenManager.loadTokenFromFile();
 const twitchService = new TwitchService({
-	twitchConfig,
+	config,
 	tokenManager: twitchTokenManager,
 	logger,
 });
@@ -82,9 +74,6 @@ const streamNotifier = new StreamNotifier({
 	subscriptionRepository,
 	logger,
 });
-const config = {
-	streamAlertsInterval: globalConfig.streamAlertsInterval,
-};
 
 export const container = {
 	telegramBot,

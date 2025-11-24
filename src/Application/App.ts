@@ -15,11 +15,11 @@ export function makeApp(ctx: AppContainer) {
 			this.loop();
 			mainLoop = setInterval(
 				this.loop.bind(this),
-				1000 * 60 * ctx.config.streamAlertsInterval,
+				1000 * 60 * ctx.config.notificationInterval,
 			);
 
 			ctx.logger.info(
-				`started stream notification loop with interval: ${ctx.config.streamAlertsInterval} minutes`,
+				`started stream notification loop with interval: ${ctx.config.notificationInterval} minute(s)`,
 			);
 		},
 

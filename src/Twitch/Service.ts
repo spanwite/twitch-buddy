@@ -4,7 +4,7 @@ import type { TwitchStream, TwitchToken, TwitchUser } from './Schemas.ts';
 import type { TwitchTokenManager } from './TokenManager.ts';
 
 interface TwitchServiceConfig {
-	clientId: string;
+	twitchClientId: string;
 }
 
 export class TwitchService {
@@ -18,11 +18,11 @@ export class TwitchService {
 
 	constructor(container: {
 		logger: AppLogger;
-		twitchConfig: TwitchServiceConfig;
+		config: TwitchServiceConfig;
 		tokenManager: TwitchTokenManager;
 	}) {
 		this.logger = container.logger;
-		this.config = container.twitchConfig;
+		this.config = container.config;
 		this.tokenManager = container.tokenManager;
 	}
 
@@ -30,7 +30,7 @@ export class TwitchService {
 		const token = await this.tokenManager.getToken();
 		const [user] = await fetchTwitchUsers({
 			userLogins: userLogin,
-			clientId: this.config.clientId,
+			clientId: this.config.twitchClientId,
 			token: token.token,
 		});
 		return user ?? null;
@@ -40,7 +40,7 @@ export class TwitchService {
 		const token = await this.tokenManager.getToken();
 		return fetchTwitchStreams({
 			userIds,
-			clientId: this.config.clientId,
+			clientId: this.config.twitchClientId,
 			token: token.token,
 		});
 	}
