@@ -1,54 +1,31 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { SubscriptionRepository } from './Subscription/Repository.ts';
-import type { TelegramBotMessage } from './TelegramBot/types.ts';
-import type { TwitchStream } from './Twitch/Schemas.ts';
-import type { TwitchService } from './Twitch/Service.ts';
-import type { AppLogger } from './types.ts';
-import { list } from './utils/array.ts';
+import type { SubscriptionRepository } from '../Subscription/Repository.ts';
+import type { TelegramBotMessage } from '../TelegramBot/types.ts';
+import type { TwitchStream } from '../Twitch/Schemas.ts';
+import type { AppLogger } from '../types.ts';
+import { list } from '../utils/array.ts';
 import {
 	escapeMarkdownV2,
 	formatDate,
 	generateTwitchUserUrl,
 	markdownLink,
-} from './utils/string.ts';
+} from '../utils/string.ts';
 
-export class StreamAlerts {
+export class StreamNotifier {
 	protected lastOnlineStreams: TwitchStream[] = [];
 
 	protected readonly telegramBot: TelegramBot;
 	protected readonly subscriptionRepository: SubscriptionRepository;
-	protected readonly twitchService: TwitchService;
 	protected readonly logger: AppLogger;
 
 	constructor(container: {
 		telegramBot: TelegramBot;
 		subscriptionRepository: SubscriptionRepository;
-		twitchService: TwitchService;
 		logger: AppLogger;
 	}) {
 		this.telegramBot = container.telegramBot;
 		this.subscriptionRepository = container.subscriptionRepository;
-		this.twitchService = container.twitchService;
 		this.logger = container.logger;
-	}
-
-	async checkStreamsFromDb(): Promise<{
-		onlineStreams: TwitchStream[];
-		offlineStreams: TwitchStream[];
-	}> {
-		const streamerIds = this.subscriptionRepository
-			.findMany({ distinct: 'streamerId' })
-			.map((sub) => sub.streamerId);
-		const onlineStreams = await this.twitchService.fetchStreamsByUserIds(streamerIds);
-		const offlineStreams = this.lastOnlineStreams.filter(
-			(stream) => !onlineStreams.find((s) => s.id === stream.id),
-		);
-		this.lastOnlineStreams = onlineStreams;
-
-		return {
-			onlineStreams,
-			offlineStreams,
-		};
 	}
 
 	async notifyAboutStartedStreams(streams: TwitchStream[] | TwitchStream): Promise<void> {

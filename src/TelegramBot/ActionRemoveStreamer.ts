@@ -7,7 +7,7 @@ import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
 import { type TelegramBotAction, TelegramBotActionVariant } from './types.ts';
 
 export class ActionRemoveStreamer implements TelegramBotAction {
-	readonly variant = TelegramBotActionVariant.RemoveStreamerWithId;
+	readonly variant = TelegramBotActionVariant.RemoveStreamerWithLogin;
 
 	protected readonly bot: TelegramBot;
 	protected readonly subscriptionRepository: SubscriptionRepository;
@@ -38,12 +38,12 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 			message_id: messageId,
 			chat: { id: chatId },
 		} = message;
-		const [, streamerId] = data.split('=');
+		const [, streamerLogin] = data.split('=');
 
 		this.subscriptionRepository.delete({
-			where: { userId: chatId.toString(), streamerId },
+			where: { userId: chatId.toString(), streamerLogin },
 		});
-		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerId}`);
+		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerLogin}`);
 
 		const streamerButtons = message.reply_markup?.inline_keyboard;
 		if (!streamerButtons) {
@@ -55,7 +55,7 @@ export class ActionRemoveStreamer implements TelegramBotAction {
 		}
 		const filteredButtons = streamerButtons
 			.flat()
-			.filter(({ callback_data }) => callback_data?.split('=')[1] !== streamerId);
+			.filter(({ callback_data }) => callback_data?.split('=')[1] !== streamerLogin);
 
 		if (filteredButtons.length === 0) {
 			await this.bot.editMessageText(

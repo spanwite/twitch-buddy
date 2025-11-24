@@ -1,9 +1,10 @@
 import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
-import type { AppConfig } from './App.ts';
+import type { AppConfig } from './Application/App.ts';
+import { StreamNotifier } from './Application/StreamNotifier.ts';
+import { StreamTracker } from './Application/StreamTracker.ts';
 import { config as globalConfig } from './config.ts';
 import { logger } from './logger.ts';
-import { StreamAlerts } from './StreamAlerts.ts';
 import { SubscriptionRepository } from './Subscription/Repository.ts';
 import { ActionRemoveStreamer } from './TelegramBot/ActionRemoveStreamer.ts';
 import { CommandAdd } from './TelegramBot/CommandAdd.ts';
@@ -41,11 +42,15 @@ const commandRemove = new CommandRemove({
 	telegramBot,
 	subscriptionRepository,
 });
+const streamTracker = new StreamTracker({
+	twitchService,
+	subscriptionRepository,
+});
 const commandList = new CommandList({
 	subscriptionRepository,
 	logger,
 	telegramBot,
-	twitchService,
+	streamTracker,
 });
 const actionRemoveStreamer = new ActionRemoveStreamer({
 	subscriptionRepository,
@@ -63,11 +68,10 @@ const telegramBotController = new TelegramBotController({
 	commands,
 	actions,
 });
-const streamAlerts = new StreamAlerts({
+const streamNotifier = new StreamNotifier({
 	telegramBot,
 	subscriptionRepository,
 	logger,
-	twitchService,
 });
 const config: AppConfig = {
 	streamAlertsInterval: globalConfig.streamAlertsInterval,
@@ -80,7 +84,8 @@ export const container = {
 	twitchService,
 	telegramBotController,
 	logger,
-	streamAlerts,
+	streamNotifier,
+	streamTracker,
 	config,
 };
 

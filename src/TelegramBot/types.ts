@@ -1,7 +1,7 @@
 import type TelegramBot from 'node-telegram-bot-api';
 
 export enum TelegramBotActionVariant {
-	RemoveStreamerWithId = 'RemoveStreamerWithId',
+	RemoveStreamerWithLogin = 'RemoveStreamerWithLogin',
 }
 
 export interface TelegramBotCommand {

@@ -1,6 +1,7 @@
-import type { StreamAlerts } from './StreamAlerts.ts';
-import type { TelegramBotController } from './TelegramBot/Controller.ts';
-import type { AppLogger } from './types.ts';
+import type { TelegramBotController } from '../TelegramBot/Controller.ts';
+import type { AppLogger } from '../types.ts';
+import type { StreamNotifier } from './StreamNotifier.ts';
+import type { StreamTracker } from './StreamTracker.ts';
 
 export interface AppConfig {
 	streamAlertsInterval: number;
@@ -8,22 +9,25 @@ export interface AppConfig {
 
 export class App {
 	protected readonly telegramBotController: TelegramBotController;
-	protected readonly streamAlerts: StreamAlerts;
+	protected readonly streamNotifier: StreamNotifier;
 	protected readonly logger: AppLogger;
 	protected readonly config: AppConfig;
+	protected readonly streamTracker: StreamTracker;
 
 	constructor(
 		protected readonly container: {
 			telegramBotController: TelegramBotController;
-			streamAlerts: StreamAlerts;
+			streamNotifier: StreamNotifier;
+			streamTracker: StreamTracker;
 			logger: AppLogger;
 			config: AppConfig;
 		},
 	) {
 		this.telegramBotController = container.telegramBotController;
-		this.streamAlerts = container.streamAlerts;
+		this.streamNotifier = container.streamNotifier;
 		this.logger = container.logger;
 		this.config = container.config;
+		this.streamTracker = container.streamTracker;
 	}
 
 	start(): void {
@@ -40,9 +44,10 @@ export class App {
 
 	protected async streamAlertsLoop(): Promise<void> {
 		try {
-			const { onlineStreams, offlineStreams } = await this.streamAlerts.checkStreamsFromDb();
-			this.streamAlerts.notifyAboutStartedStreams(onlineStreams);
-			this.streamAlerts.notifyAboutEndedStreams(offlineStreams);
+			await this.streamTracker.checkStreamsFromDb();
+
+			this.streamNotifier.notifyAboutStartedStreams(this.streamTracker.online);
+			this.streamNotifier.notifyAboutEndedStreams(this.streamTracker.wentOffline);
 		} catch (error) {
 			this.logger.error('stream alerts loop failed', error);
 		}

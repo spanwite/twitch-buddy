@@ -1,14 +1,9 @@
 import type TelegramBot from 'node-telegram-bot-api';
+import type { StreamTracker } from '../Application/StreamTracker.ts';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
-import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
-import { chunk } from '../utils/array.ts';
-import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
-import {
-	TelegramBotActionVariant,
-	type TelegramBotCommand,
-	type TelegramBotMessage,
-} from './types.ts';
+import { escapeMarkdownV2, generateTwitchUserUrl, markdownLink } from '../utils/string.ts';
+import type { TelegramBotCommand, TelegramBotMessage } from './types.ts';
 
 export class CommandList implements TelegramBotCommand {
 	readonly regexp = /\/list/;
@@ -17,19 +12,19 @@ export class CommandList implements TelegramBotCommand {
 
 	protected readonly bot: TelegramBot;
 	protected readonly subscriptionRepository: SubscriptionRepository;
-	protected readonly twitchService: TwitchService;
 	protected readonly logger: AppLogger;
+	protected readonly streamTracker: StreamTracker;
 
 	constructor(container: {
 		telegramBot: TelegramBot;
 		subscriptionRepository: SubscriptionRepository;
-		twitchService: TwitchService;
+		streamTracker: StreamTracker;
 		logger: AppLogger;
 	}) {
 		this.bot = container.telegramBot;
 		this.subscriptionRepository = container.subscriptionRepository;
-		this.twitchService = container.twitchService;
 		this.logger = container.logger;
+		this.streamTracker = container.streamTracker;
 	}
 
 	async handle(message: TelegramBot.Message) {
@@ -41,13 +36,12 @@ export class CommandList implements TelegramBotCommand {
 			await this.bot.sendMessage(chatId, ...makeEmptyListMessage());
 			return;
 		}
-		const streamersButtons: TelegramBot.InlineKeyboardButton[] = userSubs.map(
-			({ streamerLogin, streamerId }) => ({
-				text: streamerLogin,
-				callback_data: `${TelegramBotActionVariant.RemoveStreamerWithId}=${streamerId}`,
-			}),
-		);
-		await this.bot.sendMessage(chatId, ...makeStreamersListMessage(streamersButtons));
+		const streamers = userSubs.map(({ streamerLogin, streamerId }) => ({
+			streamerLogin,
+			gameName: this.streamTracker.online.find((stream) => stream.user_id === streamerId)
+				?.game_name,
+		}));
+		await this.bot.sendMessage(chatId, ...makeListMessage(streamers));
 	}
 }
 
@@ -58,14 +52,27 @@ function makeEmptyListMessage(): TelegramBotMessage {
 	];
 }
 
-function makeStreamersListMessage(buttons: TelegramBot.InlineKeyboardButton[]): TelegramBotMessage {
+function makeListMessage(
+	streamers: { streamerLogin: string; gameName?: string }[],
+): TelegramBotMessage {
+	let message = '👀 Вот список стримеров, которых ты отслеживаешь:\n\n';
+
+	let listMark = 1;
+	for (const { streamerLogin, gameName } of streamers) {
+		const status = gameName ? `*стримит ${escapeMarkdownV2(gameName)}*` : '_офлайн_';
+		const user = markdownLink(
+			escapeMarkdownV2(streamerLogin),
+			generateTwitchUserUrl(streamerLogin),
+		);
+		message += `${listMark}\\. ${user} — \\(${status}\\)\n`;
+		listMark++;
+	}
+
 	return [
-		`❌ Хочешь перестать следить за кем-то?\nТкни по нику — и он пропадёт из списка 👇`,
+		message,
 		{
-			reply_markup: {
-				inline_keyboard: chunk(buttons, STREAMER_BUTTONS_PER_ROW),
-				one_time_keyboard: true,
-			},
+			parse_mode: 'MarkdownV2',
+			disable_web_page_preview: true,
 		},
 	];
 }

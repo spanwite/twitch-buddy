@@ -2,8 +2,14 @@ import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
+import { chunk } from '../utils/array.ts';
 import { escapeMarkdownV2 } from '../utils/string.ts';
-import type { TelegramBotCommand, TelegramBotMessage } from './types.ts';
+import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
+import {
+	TelegramBotActionVariant,
+	type TelegramBotCommand,
+	type TelegramBotMessage,
+} from './types.ts';
 
 export class CommandRemove implements TelegramBotCommand {
 	readonly regexp = /\/remove/;
@@ -31,7 +37,10 @@ export class CommandRemove implements TelegramBotCommand {
 		const chatId = message.chat.id;
 		const match = /\/remove (.+)/.exec(message.text || '');
 		if (!match?.[1]) {
-			await this.bot.sendMessage(chatId, ...makeInvalidFormatMessage());
+			const userSubs = this.subscriptionRepository.findMany({
+				where: { userId: chatId.toString() },
+			});
+			await this.bot.sendMessage(chatId, ...makeListMessage(userSubs));
 			return;
 		}
 		const streamerLogin = match[1].trim().toLowerCase();
@@ -67,5 +76,23 @@ export function makeNotAddedMessage(username: string): TelegramBotMessage {
 	return [
 		`🤷 А я вообще не следил за ${streamer}\nДобавь сначала, если хочешь, чтобы я присматривал 👀`,
 		{ parse_mode: 'MarkdownV2', disable_web_page_preview: true },
+	];
+}
+
+function makeListMessage(streamers: { streamerLogin: string }[]): TelegramBotMessage {
+	const buttons = streamers.map<TelegramBot.InlineKeyboardButton>(({ streamerLogin }) => ({
+		text: streamerLogin,
+		callback_data: `${TelegramBotActionVariant.RemoveStreamerWithLogin}=${streamerLogin}`,
+	}));
+	return [
+		'\n❌ Хочешь перестать следить за кем\\-то?\nТкни по нику — и я перестану его отслеживать 👇',
+		{
+			parse_mode: 'MarkdownV2',
+			disable_web_page_preview: true,
+			reply_markup: {
+				inline_keyboard: chunk(buttons, STREAMER_BUTTONS_PER_ROW),
+				one_time_keyboard: true,
+			},
+		},
 	];
 }
