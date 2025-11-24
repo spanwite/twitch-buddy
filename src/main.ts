@@ -1,5 +1,8 @@
-import { App } from './Application/App.ts';
+import { makeApp } from './Application/App.ts';
 import { container } from './container.ts';
 
-const app = new App(container);
+const app = makeApp(container);
 app.start();
+
+process.on('SIGINT', app.shutdown.bind(app));
+process.on('SIGTERM', app.shutdown.bind(app));

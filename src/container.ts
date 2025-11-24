@@ -1,6 +1,5 @@
 import { Database } from 'bun:sqlite';
 import TelegramBot from 'node-telegram-bot-api';
-import type { AppConfig } from './Application/App.ts';
 import { StreamNotifier } from './Application/StreamNotifier.ts';
 import { StreamTracker } from './Application/StreamTracker.ts';
 import { config as globalConfig } from './config.ts';
@@ -83,7 +82,7 @@ const streamNotifier = new StreamNotifier({
 	subscriptionRepository,
 	logger,
 });
-const config: AppConfig = {
+const config = {
 	streamAlertsInterval: globalConfig.streamAlertsInterval,
 };
 

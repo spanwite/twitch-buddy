@@ -1,55 +1,51 @@
-import type { TelegramBotController } from '../TelegramBot/Controller.ts';
-import type { AppLogger } from '../types.ts';
-import type { StreamNotifier } from './StreamNotifier.ts';
-import type { StreamTracker } from './StreamTracker.ts';
+import type { AppContainer } from '../container.ts';
 
-export interface AppConfig {
-	streamAlertsInterval: number;
-}
+export function makeApp(ctx: AppContainer) {
+	let mainLoop: NodeJS.Timeout;
 
-export class App {
-	protected readonly telegramBotController: TelegramBotController;
-	protected readonly streamNotifier: StreamNotifier;
-	protected readonly logger: AppLogger;
-	protected readonly config: AppConfig;
-	protected readonly streamTracker: StreamTracker;
+	return {
+		start(): void {
+			if (mainLoop) {
+				ctx.logger.warn('app is already running');
+				return;
+			}
 
-	constructor(
-		protected readonly container: {
-			telegramBotController: TelegramBotController;
-			streamNotifier: StreamNotifier;
-			streamTracker: StreamTracker;
-			logger: AppLogger;
-			config: AppConfig;
+			ctx.telegramBotController.setupHandlers();
+
+			this.loop();
+			mainLoop = setInterval(
+				this.loop.bind(this),
+				1000 * 60 * ctx.config.streamAlertsInterval,
+			);
+
+			ctx.logger.info(
+				`started stream notification loop with interval: ${ctx.config.streamAlertsInterval} minutes`,
+			);
 		},
-	) {
-		this.telegramBotController = container.telegramBotController;
-		this.streamNotifier = container.streamNotifier;
-		this.logger = container.logger;
-		this.config = container.config;
-		this.streamTracker = container.streamTracker;
-	}
 
-	start(): void {
-		this.telegramBotController.setupHandlers();
-		this.streamAlertsLoop();
+		stop(): void {
+			clearInterval(mainLoop);
+		},
 
-		const interval = 1000 * 60 * this.config.streamAlertsInterval;
-		setInterval(this.streamAlertsLoop.bind(this), interval);
+		async loop(): Promise<void> {
+			try {
+				await ctx.streamTracker.checkStreamsFromDb();
 
-		this.logger.info(
-			`started stream alerts loop with interval: ${this.config.streamAlertsInterval} minutes`,
-		);
-	}
+				await Promise.all([
+					ctx.streamNotifier.notifyAboutStartedStreams(ctx.streamTracker.online),
+					ctx.streamNotifier.notifyAboutEndedStreams(ctx.streamTracker.wentOffline),
+				]);
+			} catch (error) {
+				ctx.logger.error('stream notification loop failed', error);
+			}
+		},
 
-	protected async streamAlertsLoop(): Promise<void> {
-		try {
-			await this.streamTracker.checkStreamsFromDb();
-
-			this.streamNotifier.notifyAboutStartedStreams(this.streamTracker.online);
-			this.streamNotifier.notifyAboutEndedStreams(this.streamTracker.wentOffline);
-		} catch (error) {
-			this.logger.error('stream alerts loop failed', error);
-		}
-	}
+		async shutdown(): Promise<void> {
+			this.stop();
+			await ctx.telegramBot.stopPolling();
+			ctx.database.close();
+			ctx.logger.info('app has been shut down gracefully');
+			process.exit(0);
+		},
+	};
 }
