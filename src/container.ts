@@ -14,6 +14,7 @@ import { CommandStart } from './TelegramBot/CommandStart.ts';
 import { TelegramBotController } from './TelegramBot/Controller.ts';
 import type { TelegramBotAction, TelegramBotCommand } from './TelegramBot/types.ts';
 import { TwitchService } from './Twitch/Service.ts';
+import { TwitchTokenManager } from './Twitch/TokenManager.ts';
 
 const telegramBot = new TelegramBot(globalConfig.telegramBotToken, {
 	polling: true,
@@ -23,10 +24,19 @@ const subscriptionRepository = new SubscriptionRepository(database);
 const twitchConfig = {
 	clientId: globalConfig.twitchClientId,
 	clientSecret: globalConfig.twitchClientSecret,
-	saveTokenToFile: 'twitchTokens.local.json',
 };
+const twitchTokenManager = new TwitchTokenManager({
+	config: {
+		twitchClientId: twitchConfig.clientId,
+		twitchClientSecret: twitchConfig.clientSecret,
+		twitchTokenFilePath: 'twitchTokens.local.json',
+	},
+	logger,
+});
+twitchTokenManager.loadTokenFromFile();
 const twitchService = new TwitchService({
 	twitchConfig,
+	tokenManager: twitchTokenManager,
 	logger,
 });
 const commandStart = new CommandStart({ telegramBot });

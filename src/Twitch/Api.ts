@@ -10,7 +10,7 @@ import {
 
 const TWITCH_API_BASE_URL = 'https://api.twitch.tv/helix';
 
-export async function fetchUsers(params: {
+export async function fetchTwitchUsers(params: {
 	userIds?: string[] | string;
 	userLogins?: string[] | string;
 	token: string;
@@ -49,7 +49,7 @@ export async function fetchUsers(params: {
 	return results;
 }
 
-export async function fetchStreams(params: {
+export async function fetchTwitchStreams(params: {
 	userIds?: string[] | string;
 	userLogins?: string[] | string;
 	token: string;
@@ -88,7 +88,7 @@ export async function fetchStreams(params: {
 	return results;
 }
 
-export async function fetchToken(data: { clientSecret: string; clientId: string }) {
+export async function fetchTwitchToken(data: { clientSecret: string; clientId: string }) {
 	const { clientSecret, clientId } = data;
 	const response = await fetch('https://id.twitch.tv/oauth2/token', {
 		method: 'POST',
