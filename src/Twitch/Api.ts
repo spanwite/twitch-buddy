@@ -1,5 +1,6 @@
 import { chunk, list } from '../utils/array.ts';
 import { HttpRequestError } from '../utils/error.ts';
+import { limiter } from '../utils/limiter.ts';
 import {
 	type TwitchStream,
 	TwitchStreamsResponseSchema,
@@ -7,6 +8,9 @@ import {
 	type TwitchUser,
 	TwitchUsersResponseSchema,
 } from './Schemas.ts';
+
+const callLimited = limiter(10);
+const fetchWithLimit = async (input: string, init?: RequestInit) => callLimited(fetch, input, init);
 
 const TWITCH_API_BASE_URL = 'https://api.twitch.tv/helix';
 
@@ -33,7 +37,7 @@ export async function fetchTwitchUsers(params: {
 
 	for (const chunk of chunks) {
 		const query = chunk.join('&');
-		const response = await fetch(`${TWITCH_API_BASE_URL}/users?${query}`, {
+		const response = await fetchWithLimit(`${TWITCH_API_BASE_URL}/users?${query}`, {
 			method: 'GET',
 			headers,
 		});
@@ -72,7 +76,7 @@ export async function fetchTwitchStreams(params: {
 
 	for (const chunk of chunks) {
 		const query = chunk.join('&');
-		const response = await fetch(`${TWITCH_API_BASE_URL}/streams?${query}`, {
+		const response = await fetchWithLimit(`${TWITCH_API_BASE_URL}/streams?${query}`, {
 			method: 'GET',
 			headers,
 		});
@@ -90,7 +94,7 @@ export async function fetchTwitchStreams(params: {
 
 export async function fetchTwitchToken(data: { clientSecret: string; clientId: string }) {
 	const { clientSecret, clientId } = data;
-	const response = await fetch('https://id.twitch.tv/oauth2/token', {
+	const response = await fetchWithLimit('https://id.twitch.tv/oauth2/token', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/x-www-form-urlencoded',
