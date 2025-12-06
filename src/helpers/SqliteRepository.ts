@@ -123,7 +123,9 @@ export class SqliteRepository<Entity extends Record<string, any>> {
 	>({ data, select, where }: Args): Return | null {
 		const [whereQuery, whereParams] = generateWhereClause(where);
 		const returningClause = generateReturningClause(select);
-		const valuesSchema = Object.keys(data).map((key) => `${key} = ?`);
+		const valuesSchema = Object.keys(data)
+			.map((key) => `${key} = ?`)
+			.join(', ');
 
 		const query = `UPDATE ${this.tableName} SET ${valuesSchema} ${whereQuery} ${returningClause}`;
 
@@ -140,7 +142,9 @@ export class SqliteRepository<Entity extends Record<string, any>> {
 	>({ data, select, where }: Args): Return[] {
 		const [whereQuery, whereParams] = generateWhereClause(where);
 		const returningClause = generateReturningClause(select);
-		const valuesSchema = Object.keys(data).map((key) => `${key} = ?`);
+		const valuesSchema = Object.keys(data)
+			.map((key) => `${key} = ?`)
+			.join(', ');
 
 		const query = `UPDATE ${this.tableName} SET ${valuesSchema} ${whereQuery} ${returningClause}`;
 

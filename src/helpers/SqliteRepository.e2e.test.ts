@@ -155,7 +155,10 @@ describe('SqliteRepository', () => {
 		});
 
 		it('updates an existing entity', () => {
-			const data = { name: faker.person.firstName() };
+			const data = {
+				name: faker.person.firstName(),
+				isAdult: faker.number.int({ min: 0, max: 1 }),
+			};
 			const result = repo.update({
 				data: data,
 				where: { id: firstEntity.id },
@@ -163,8 +166,8 @@ describe('SqliteRepository', () => {
 			const fetched = database
 				.prepare(`SELECT * FROM ${repo.tableName} WHERE id = ${firstEntity.id}`)
 				.get();
-			expect(result).toEqual({ ...firstEntity, name: data.name });
-			expect(fetched).toEqual({ ...firstEntity, name: data.name });
+			expect(result).toEqual({ ...firstEntity, ...data });
+			expect(fetched).toEqual({ ...firstEntity, ...data });
 		});
 
 		it('returns null if entity does not exist', () => {
