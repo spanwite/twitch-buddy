@@ -106,7 +106,7 @@ export class SqliteRepository<Entity extends Record<string, any>> {
 	findFirst<
 		Args extends Pick<QueryArgs<Entity>, 'where' | 'select'>,
 		Return = ReturnSchema<Entity, Args>,
-	>({ where, select }: Args): Return | null {
+	>({ where, select }: Args = {} as Args): Return | null {
 		const [whereQuery, whereParams] = where ? generateWhereClause(where) : ['', []];
 		const selectSchema = select ? Object.keys(select).join(', ') : '*';
 

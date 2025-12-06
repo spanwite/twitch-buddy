@@ -1,16 +1,17 @@
+import type { TokenService } from '../Token/Service.ts';
 import type { AppLogger } from '../types.ts';
 import { fetchTwitchToken } from './Api.ts';
-import { type TwitchToken, TwitchTokenSchema } from './Schemas.ts';
+import type { TwitchToken } from './Schemas.ts';
 
 interface TwitchTokenManagerConfig {
 	twitchClientId: string;
 	twitchClientSecret: string;
-	twitchTokenFilePath?: string;
 }
 
 export class TwitchTokenManager {
 	protected readonly config: TwitchTokenManagerConfig;
 	protected readonly logger: AppLogger;
+	protected readonly tokenService: TokenService;
 
 	protected token: TwitchToken | null = null;
 	protected pendingTokenPromise: Promise<TwitchToken> | null = null;
@@ -18,9 +19,19 @@ export class TwitchTokenManager {
 	constructor(container: {
 		config: TwitchTokenManagerConfig;
 		logger: AppLogger;
+		tokenService: TokenService;
 	}) {
 		this.config = container.config;
 		this.logger = container.logger;
+		this.tokenService = container.tokenService;
+		this.token = this.tokenService.find();
+		if (!this.token) {
+			this.logger.info('no twitch token found in database');
+		} else {
+			this.logger.info(
+				`twitch token loaded from database. it will expire at ${TwitchTokenManager.getTokenExpiryLabel(this.token)}`,
+			);
+		}
 	}
 
 	async getToken(): Promise<TwitchToken> {
@@ -33,9 +44,10 @@ export class TwitchTokenManager {
 		this.pendingTokenPromise = this.fetchToken();
 		try {
 			this.token = await this.pendingTokenPromise;
-			if (this.config.twitchTokenFilePath) {
-				await this.saveTokenToFile(this.token);
-			}
+			this.tokenService.renew(this.token);
+			this.logger.info(
+				`twitch token updated. it will expire at ${TwitchTokenManager.getTokenExpiryLabel(this.token)}`,
+			);
 			return this.token;
 		} finally {
 			this.pendingTokenPromise = null;
@@ -57,34 +69,16 @@ export class TwitchTokenManager {
 		};
 	}
 
-	protected async saveTokenToFile(token: TwitchToken): Promise<void> {
-		const path = this.config.twitchTokenFilePath;
-		if (!path) {
-			throw new Error('twitch token file path is not set');
-		}
-		await Bun.write(path, JSON.stringify(token));
-	}
-
-	async loadTokenFromFile(): Promise<void> {
-		const path = this.config.twitchTokenFilePath;
-		if (!path) {
-			throw new Error('twitch token file path is not set');
-		}
-		const file = Bun.file(path);
-		const exists = await file.exists();
-		if (exists === false) {
-			this.logger.warn(`token not loaded. ${path} does not exist `);
-			return;
-		}
-		const token = await file.json();
-		this.token = TwitchTokenSchema.parse(token);
-	}
-
 	static isTokenValid(token: Omit<TwitchToken, 'token'>): boolean {
 		return Date.now() < TwitchTokenManager.calculateTokenExpiry(token);
 	}
 
 	static calculateTokenExpiry(token: Omit<TwitchToken, 'token'>): number {
 		return token ? token.lastUpdatedAt + token.expiresIn * 1000 : -1;
+	}
+
+	static getTokenExpiryLabel(token: Omit<TwitchToken, 'token'>): string {
+		const expiry = new Date(TwitchTokenManager.calculateTokenExpiry(token));
+		return expiry.toISOString();
 	}
 }

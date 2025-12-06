@@ -12,6 +12,8 @@ import { CommandRemove } from './TelegramBot/CommandRemove.ts';
 import { CommandStart } from './TelegramBot/CommandStart.ts';
 import { TelegramBotController } from './TelegramBot/Controller.ts';
 import type { TelegramBotAction, TelegramBotCommand } from './TelegramBot/types.ts';
+import { TokenRepository } from './Token/Repository.ts';
+import { TokenService } from './Token/Service.ts';
 import { TwitchService } from './Twitch/Service.ts';
 import { TwitchTokenManager } from './Twitch/TokenManager.ts';
 
@@ -20,11 +22,13 @@ const telegramBot = new TelegramBot(config.telegramBotToken, {
 });
 const database = new Database(config.databaseUrl);
 const subscriptionRepository = new SubscriptionRepository(database);
+const tokenRepository = new TokenRepository(database);
+const tokenService = new TokenService({ tokenRepository });
 const twitchTokenManager = new TwitchTokenManager({
 	config,
 	logger,
+	tokenService,
 });
-await twitchTokenManager.loadTokenFromFile();
 const twitchService = new TwitchService({
 	config,
 	tokenManager: twitchTokenManager,
