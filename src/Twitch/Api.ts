@@ -1,6 +1,6 @@
 import { chunk, list } from '../utils/array.ts';
 import { HttpRequestError } from '../utils/error.ts';
-import { limiter } from '../utils/limiter.ts';
+import { makeParallelLimiter } from '../utils/function.ts';
 import {
 	type TwitchStream,
 	TwitchStreamsResponseSchema,
@@ -9,7 +9,7 @@ import {
 	TwitchUsersResponseSchema,
 } from './Schemas.ts';
 
-const callLimited = limiter(10);
+const callLimited = makeParallelLimiter(10);
 const fetchWithLimit = async (input: string, init?: RequestInit) => callLimited(fetch, input, init);
 
 const TWITCH_API_BASE_URL = 'https://api.twitch.tv/helix';

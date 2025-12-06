@@ -1,9 +1,9 @@
 import { describe, expect, it, jest } from 'bun:test';
-import { limiter } from './limiter.ts';
+import { makeParallelLimiter } from './function.ts';
 
 describe('limiter', () => {
 	it('returns resolved value', async () => {
-		const callWithLimit = limiter(1);
+		const callWithLimit = makeParallelLimiter(1);
 		const fn = jest.fn().mockResolvedValue('a');
 
 		const result = callWithLimit(fn);
@@ -13,7 +13,7 @@ describe('limiter', () => {
 	});
 
 	it('passes arguments to given function', async () => {
-		const callWithLimit = limiter(1);
+		const callWithLimit = makeParallelLimiter(1);
 		const fn = jest.fn().mockImplementation((a: number, b: number) => a + b);
 
 		const result = await callWithLimit(fn, 2, 3);
@@ -24,7 +24,7 @@ describe('limiter', () => {
 	});
 
 	it('does not exceed the limit', async () => {
-		const callWithLimit = limiter(4);
+		const callWithLimit = makeParallelLimiter(4);
 		let maxConcurrent = 0;
 		let currentConcurrent = 0;
 		const fn = jest.fn().mockImplementation(async () => {
@@ -40,3 +40,10 @@ describe('limiter', () => {
 		expect(fn).toHaveBeenCalledTimes(10);
 	});
 });
+
+// const intervalLimiter = makeIntervalLimiter(10_000, 800);
+// const task = (i: number) => new Promise((resolve) => setTimeout(() => resolve(i), 2000));
+//
+// const promises = Array.from({ length: 20 }).map((_, i) => intervalLimiter.schedule(task, i));
+//
+// Promise.all(promises).then(console.log);

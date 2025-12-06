@@ -1,11 +1,11 @@
 import { Database } from 'bun:sqlite';
-import TelegramBot from 'node-telegram-bot-api';
 import { StreamNotifier } from './Application/StreamNotifier.ts';
 import { StreamTracker } from './Application/StreamTracker.ts';
 import { config } from './config.ts';
 import { logger } from './logger.ts';
 import { SubscriptionRepository } from './Subscription/Repository.ts';
 import { ActionRemoveStreamer } from './TelegramBot/ActionRemoveStreamer.ts';
+import { TelegramBot } from './TelegramBot/Bot.ts';
 import { CommandAdd } from './TelegramBot/CommandAdd.ts';
 import { CommandList } from './TelegramBot/CommandList.ts';
 import { CommandRemove } from './TelegramBot/CommandRemove.ts';
