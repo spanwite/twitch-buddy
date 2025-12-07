@@ -14,6 +14,7 @@ import { TelegramBotController } from './TelegramBot/Controller.ts';
 import type { TelegramBotAction, TelegramBotCommand } from './TelegramBot/types.ts';
 import { TokenRepository } from './Token/Repository.ts';
 import { TokenService } from './Token/Service.ts';
+import { TwitchApi } from './Twitch/Api.ts';
 import { TwitchService } from './Twitch/Service.ts';
 import { TwitchTokenManager } from './Twitch/TokenManager.ts';
 
@@ -24,15 +25,18 @@ const database = new Database(config.databaseUrl);
 const subscriptionRepository = new SubscriptionRepository(database);
 const tokenRepository = new TokenRepository(database);
 const tokenService = new TokenService({ tokenRepository });
+const twitchApi = new TwitchApi({ logger });
 const twitchTokenManager = new TwitchTokenManager({
 	config,
 	logger,
 	tokenService,
+	twitchApi,
 });
 const twitchService = new TwitchService({
 	config,
 	tokenManager: twitchTokenManager,
 	logger,
+	twitchApi,
 });
 const commandStart = new CommandStart({ telegramBot });
 const commandAdd = new CommandAdd({

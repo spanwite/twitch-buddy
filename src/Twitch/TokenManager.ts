@@ -1,6 +1,6 @@
 import type { TokenService } from '../Token/Service.ts';
 import type { AppLogger } from '../types.ts';
-import { fetchTwitchToken } from './Api.ts';
+import type { TwitchApi } from './Api.ts';
 import type { TwitchToken } from './Schemas.ts';
 
 interface TwitchTokenManagerConfig {
@@ -12,6 +12,7 @@ export class TwitchTokenManager {
 	protected readonly config: TwitchTokenManagerConfig;
 	protected readonly logger: AppLogger;
 	protected readonly tokenService: TokenService;
+	protected readonly twitchApi: TwitchApi;
 
 	protected token: TwitchToken | null = null;
 	protected pendingTokenPromise: Promise<TwitchToken> | null = null;
@@ -20,11 +21,14 @@ export class TwitchTokenManager {
 		config: TwitchTokenManagerConfig;
 		logger: AppLogger;
 		tokenService: TokenService;
+		twitchApi: TwitchApi;
 	}) {
 		this.config = container.config;
 		this.logger = container.logger;
 		this.tokenService = container.tokenService;
 		this.token = this.tokenService.find();
+		this.twitchApi = container.twitchApi;
+
 		if (!this.token) {
 			this.logger.info('no twitch token found in database');
 		} else {
@@ -57,7 +61,7 @@ export class TwitchTokenManager {
 	protected async fetchToken(): Promise<TwitchToken> {
 		const { twitchClientId: clientId, twitchClientSecret: clientSecret } = this.config;
 
-		const { access_token: token, expires_in: expiresIn } = await fetchTwitchToken({
+		const { access_token: token, expires_in: expiresIn } = await this.twitchApi.fetchToken({
 			clientId,
 			clientSecret,
 		});

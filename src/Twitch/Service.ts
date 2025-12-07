@@ -1,5 +1,5 @@
 import type { AppLogger } from '../types.ts';
-import { fetchTwitchStreams, fetchTwitchUsers } from './Api.ts';
+import type { TwitchApi } from './Api.ts';
 import type { TwitchStream, TwitchToken, TwitchUser } from './Schemas.ts';
 import type { TwitchTokenManager } from './TokenManager.ts';
 
@@ -13,22 +13,25 @@ export class TwitchService {
 	protected readonly config: TwitchServiceConfig;
 	protected readonly logger: AppLogger;
 	protected readonly tokenManager: TwitchTokenManager;
+	protected readonly twitchApi: TwitchApi;
 
 	protected token: TwitchToken | null = null;
 
 	constructor(container: {
 		logger: AppLogger;
 		config: TwitchServiceConfig;
+		twitchApi: TwitchApi;
 		tokenManager: TwitchTokenManager;
 	}) {
 		this.logger = container.logger;
 		this.config = container.config;
 		this.tokenManager = container.tokenManager;
+		this.twitchApi = container.twitchApi;
 	}
 
 	async fetchUserByLogin(userLogin: string): Promise<TwitchUser | null> {
 		const token = await this.tokenManager.getToken();
-		const [user] = await fetchTwitchUsers({
+		const [user] = await this.twitchApi.fetchUsers({
 			userLogins: userLogin,
 			clientId: this.config.twitchClientId,
 			token: token.token,
@@ -38,7 +41,7 @@ export class TwitchService {
 
 	async fetchStreamsByUserIds(userIds: string[]): Promise<TwitchStream[]> {
 		const token = await this.tokenManager.getToken();
-		return fetchTwitchStreams({
+		return this.twitchApi.fetchStreams({
 			userIds,
 			clientId: this.config.twitchClientId,
 			token: token.token,
