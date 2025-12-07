@@ -9,9 +9,10 @@ import { escapeMarkdownV2, generateTwitchUserUrl, markdownLink } from '../utils/
 import type { TelegramBotCommand, TelegramBotMessage } from './types.ts';
 
 export class CommandAdd implements TelegramBotCommand {
-	regexp = /\/add/;
-	name = '/add';
-	description = 'Добавить стримера в список отслеживания';
+	readonly regexp = /\/add/;
+	readonly name = '/add';
+	readonly description = 'Добавить стримера в список отслеживания';
+	readonly usage = '`/add <ник_стримера>`';
 
 	protected readonly bot: TelegramBot;
 	protected readonly twitchService: TwitchService;

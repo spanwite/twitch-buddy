@@ -8,6 +8,7 @@ export interface TelegramBotCommand {
 	regexp: RegExp;
 	name: string;
 	description: string;
+	usage?: string;
 
 	handle(message: TelegramBot.Message): Promise<void>;
 }

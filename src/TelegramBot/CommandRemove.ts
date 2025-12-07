@@ -15,6 +15,8 @@ export class CommandRemove implements TelegramBotCommand {
 	readonly regexp = /\/remove/;
 	readonly name = '/remove';
 	readonly description = 'Удалить стримера из списка отслеживания';
+	readonly usage =
+		'\n1\\. `/remove <ник_стримера>` — удалить стримера из списка отслеживания\\.\n2\\. `/remove` — показать список текущих подписок с кнопками для удаления\\.';
 
 	protected readonly bot: TelegramBot;
 	protected readonly subscriptionRepository: SubscriptionRepository;

@@ -7,6 +7,7 @@ import { SubscriptionRepository } from './Subscription/Repository.ts';
 import { ActionRemoveStreamer } from './TelegramBot/ActionRemoveStreamer.ts';
 import { TelegramBot } from './TelegramBot/Bot.ts';
 import { CommandAdd } from './TelegramBot/CommandAdd.ts';
+import { CommandHelp } from './TelegramBot/CommandHelp.ts';
 import { CommandList } from './TelegramBot/CommandList.ts';
 import { CommandRemove } from './TelegramBot/CommandRemove.ts';
 import { CommandStart } from './TelegramBot/CommandStart.ts';
@@ -68,6 +69,11 @@ const actionRemoveStreamer = new ActionRemoveStreamer({
 	twitchService,
 });
 const commands: TelegramBotCommand[] = [commandStart, commandAdd, commandRemove, commandList];
+const commandHelp = new CommandHelp({
+	telegramBot,
+	commands,
+});
+commands.push(commandHelp);
 const actions: TelegramBotAction[] = [actionRemoveStreamer];
 const telegramBotController = new TelegramBotController({
 	telegramBot,
