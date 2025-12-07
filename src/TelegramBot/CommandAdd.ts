@@ -1,5 +1,6 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import type { SubscriptionRepository } from '../Subscription/Repository.ts';
+import { isTwitchUsernameValid } from '../Twitch/helpers.ts';
 import type { TwitchUser } from '../Twitch/Schemas.ts';
 import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
@@ -41,6 +42,10 @@ export class CommandAdd implements TelegramBotCommand {
 			return;
 		}
 		const streamerLogin = match[1].toLowerCase().trim();
+		if (isTwitchUsernameValid(streamerLogin) === false) {
+			await this.bot.sendMessage(chatId, ...makeNotFoundMessage(streamerLogin));
+			return;
+		}
 		let fetchedStreamer: TwitchUser | null = null;
 		try {
 			fetchedStreamer = await this.twitchService.fetchUserByLogin(streamerLogin);
@@ -69,7 +74,7 @@ export class CommandAdd implements TelegramBotCommand {
 			},
 		});
 		await this.bot.sendMessage(chatId, ...makeAddedMessage(streamerLogin));
-		this.logger.info(`added subscription from user ${chatId} to streamer ${streamerLogin}`);
+		this.logger.info(`added subscription user ${chatId} to streamer ${streamerLogin}`);
 	}
 }
 

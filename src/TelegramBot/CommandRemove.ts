@@ -52,7 +52,7 @@ export class CommandRemove implements TelegramBotCommand {
 			return;
 		}
 		await this.bot.sendMessage(chatId, ...makeRemovedMessage(streamerLogin));
-		this.logger.info(`removed subscription from user ${chatId} to streamer ${streamerLogin}`);
+		this.logger.info(`removed subscription user ${chatId} to streamer ${streamerLogin}`);
 	}
 }
 
