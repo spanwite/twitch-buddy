@@ -3,7 +3,9 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"start": "bun run src/main.ts"
+		"dev": "bun run ./src/main.ts",
+		"build": "bun build ./src/main.ts --outdir=./dist --target=bun --minify",
+		"start": "bun run ./dist/main.js"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.1.2",
