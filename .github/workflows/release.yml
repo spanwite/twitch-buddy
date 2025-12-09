@@ -47,13 +47,14 @@ jobs:
       - name: Build binary
         run: |
           mkdir build
-          bun build --compile --minify --sourcemap ./src/main.ts --target=bun-${{ matrix.target }} --outfile build/${{ env.AppName }}
+          bun build --compile --minify --sourcemap src/main.ts --target=bun-${{ matrix.target }} --outfile build/${{ env.AppName }}
 
       - name: Prepare release directory
         run: |
           mkdir release
           cp build/* release/
-          cp ./README.md release/
+          cp .env.example release/.env
+          cp README.md release/
 
       - name: Create archive (Unix)
         if: runner.os != 'Windows'
