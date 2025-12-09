@@ -3,9 +3,12 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "bun run ./src/main.ts",
-		"build": "bun build ./src/main.ts --outdir=./dist --target=bun --minify",
-		"start": "bun run ./dist/main.js"
+		"dev": "NODE_ENV=development bun src/main.ts",
+		"build": "bun build src/main.ts --minify --outdir=dist --target=bun",
+		"start": "bun dist/main.js",
+		"check": "bunx biome check --write ./src",
+		"format": "bunx biome format --write ./src",
+		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.1.2",
