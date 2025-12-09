@@ -32,6 +32,7 @@ export class TelegramBotController {
 	setupHandlers() {
 		this.setupCommands();
 		this.setupActions();
+		this.logger.info('telegram bot started');
 	}
 
 	protected setupCommands(): void {
@@ -47,7 +48,7 @@ export class TelegramBotController {
 				command: name,
 				description: description,
 			});
-			this.logger.info(`registered bot command ${name}`);
+			this.logger.debug(`registered bot command ${name}`);
 		}
 		this.bot.setMyCommands(botCommands);
 	}
@@ -55,7 +56,7 @@ export class TelegramBotController {
 	protected setupActions(): void {
 		this.bot.on('callback_query', this.handleCallbackQuery.bind(this));
 		for (const action of this.actions) {
-			this.logger.info(`registered bot action ${action.variant}`);
+			this.logger.debug(`registered bot action ${action.variant}`);
 		}
 	}
 

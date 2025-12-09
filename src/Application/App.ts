@@ -19,7 +19,7 @@ export function makeApp(ctx: AppContainer) {
 			);
 
 			ctx.logger.info(
-				`started stream notification loop with interval: ${ctx.config.notificationInterval} minute(s)`,
+				`stream notification loop started with interval: ${ctx.config.notificationInterval} minute(s)`,
 			);
 		},
 
@@ -44,7 +44,7 @@ export function makeApp(ctx: AppContainer) {
 			this.stop();
 			await ctx.telegramBot.stopPolling();
 			ctx.database.close();
-			ctx.logger.info('app has been shut down gracefully');
+			ctx.logger.debug('app has been shut down gracefully');
 			process.exit(0);
 		},
 	};

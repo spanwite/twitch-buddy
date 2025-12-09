@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { createLogger, format, transports } from 'winston';
 
 const logFormat = format.printf(({ level, message, timestamp, stack, ...restMeta }) => {
@@ -7,23 +8,35 @@ const logFormat = format.printf(({ level, message, timestamp, stack, ...restMeta
 });
 
 export const logger = createLogger({
-	level: 'debug',
-	format: format.combine(
-		format.timestamp({ format: 'DD.MM.YYYY HH:mm:ss' }),
-		format.colorize(),
-		logFormat,
-	),
-	transports: [new transports.Console()],
+	transports: [
+		new transports.Console({
+			level: Bun.env.NODE_ENV === 'development' ? 'debug' : 'info',
+			format: format.combine(
+				format.timestamp({ format: 'DD.MM.YYYY HH:mm:ss' }),
+				format.colorize(),
+				logFormat,
+			),
+		}),
+	],
 });
 
-if (Bun.env.NODE_ENV === 'production') {
-	logger.clear();
-	logger.add(
-		new transports.File({
-			filename: 'error.log',
-			level: 'error',
-			format: format.json(),
-		}),
-	);
-	logger.add(new transports.File({ filename: 'combined.log', format: format.json() }));
+if (Bun.env.NODE_ENV !== 'development') {
+	mkdirSync('logs', { recursive: true });
+	logger
+		.add(
+			new transports.File({
+				filename: 'error.log',
+				level: 'error',
+				format: format.json(),
+				dirname: 'logs',
+			}),
+		)
+		.add(
+			new transports.File({
+				filename: 'combined.log',
+				level: 'info',
+				format: format.json(),
+				dirname: 'logs',
+			}),
+		);
 }
