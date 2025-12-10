@@ -1,11 +1,38 @@
 name: Multi-Platform Bun Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
 
 jobs:
+  check:
+    name: Do quality checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Build project
+        run: bun run build
+
+      - name: Check TypeScript types
+        run: bun run typecheck
+
+      - name: Run Biome checks
+        run: bun run check
+
+      - name: Run tests
+        run: bun run test
+
   build:
     strategy:
       matrix:
@@ -29,6 +56,7 @@ jobs:
             target: windows-x64
 
     name: Build ${{ matrix.target }}
+    needs: check
     runs-on: ${{ matrix.os }}
     env:
       AppName: TwitchBuddy

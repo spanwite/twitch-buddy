@@ -9,6 +9,7 @@
 		"check": "bunx biome check --write ./src",
 		"format": "bunx biome format --write ./src",
 		"typecheck": "tsc --noEmit",
+		"test": "bun test",
 		"prepare": "husky"
 	},
 	"devDependencies": {
