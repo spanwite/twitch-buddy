@@ -58,7 +58,8 @@ export class CommandRemove implements TelegramBotCommand {
 	}
 }
 
-function makeInvalidFormatMessage(): TelegramBotMessage {
+// @ts-ignore
+function _makeInvalidFormatMessage(): TelegramBotMessage {
 	return [
 		'Не понял, кого нужно удалить 🤔\nПравильный формат: `/remove <ник_стримера>`',
 		{ parse_mode: 'Markdown' },
