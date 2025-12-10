@@ -45,7 +45,7 @@ export class CommandList implements TelegramBotCommand {
 	}
 }
 
-function makeEmptyListMessage(): TelegramBotMessage {
+export function makeEmptyListMessage(): TelegramBotMessage {
 	return [
 		`👀 Никого не нашёл в твоём списке...\nХочешь начать следить за кем-то? Напиши: \`/add <ник_стримера>\``,
 		{ parse_mode: 'Markdown' },

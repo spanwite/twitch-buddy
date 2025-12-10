@@ -4,6 +4,7 @@ import type { TwitchService } from '../Twitch/Service.ts';
 import type { AppLogger } from '../types.ts';
 import { chunk } from '../utils/array.ts';
 import { escapeMarkdownV2 } from '../utils/string.ts';
+import { makeEmptyListMessage } from './CommandList.ts';
 import { STREAMER_BUTTONS_PER_ROW } from './constants.ts';
 import {
 	TelegramBotActionVariant,
@@ -42,6 +43,10 @@ export class CommandRemove implements TelegramBotCommand {
 			const userSubs = this.subscriptionRepository.findMany({
 				where: { userId: chatId.toString() },
 			});
+			if (!userSubs.length) {
+				await this.bot.sendMessage(chatId, ...makeEmptyListMessage());
+				return;
+			}
 			await this.bot.sendMessage(chatId, ...makeListMessage(userSubs));
 			return;
 		}
