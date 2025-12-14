@@ -18,7 +18,7 @@ A telegram bot that notifies you when your favorite Twitch streamers go live or 
 
 ## 🚀 Quick Start (Binary)
 
-1. Download the binary for your OS from the GitHub Releases page
+1. Download the binary for your OS from the [Releases page](https://github.com/spanwite/twitch-buddy/releases/)
 2. Create and fill the .env file (see Configuration)
 3. Run the binary
 
